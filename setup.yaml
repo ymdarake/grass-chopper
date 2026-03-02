@@ -63,7 +63,8 @@ write_files:
       sleep 2
 
       # 3. x11vnc (VNCサーバー) を起動
-      #    - パスワード認証を設定（デフォルト: "ubuntu"）
+      #    - パスワード認証あり（デフォルトパスワード: "ubuntu"）
+      #    - 変更したい場合: VM内で VNC_PASSWORD=新パスワード を設定してサービス再起動
       #    - -listen localhost: ローカルホストからの接続のみ許可（セキュリティ）
       #    - -forever: クライアント切断後もサーバーを終了しない
       mkdir -p ~/.vnc
