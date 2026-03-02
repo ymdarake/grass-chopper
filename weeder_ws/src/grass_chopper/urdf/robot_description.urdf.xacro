@@ -1,0 +1,349 @@
+<?xml version="1.0"?>
+<!--
+  ============================================================================
+  草刈りロボット URDF モデル定義
+  ============================================================================
+  2輪差動駆動方式のロボットモデルです。
+
+  構成:
+    - base_link: ロボット本体（直方体シャーシ）
+    - left_wheel / right_wheel: 左右の駆動輪（円柱）
+    - caster_wheel: 前方のキャスター（球体、受動輪）
+    - lidar_link: LiDARセンサー搭載台
+    - camera_link: カメラセンサー搭載台
+
+  Gazebo Harmonicプラグイン:
+    - gz-sim-diff-drive-system: 差動駆動制御
+    - gz-sim-joint-state-publisher-system: 関節状態の発行
+    - gpu_lidar センサー: 360度レーザースキャン
+    - camera センサー: RGB画像撮影
+
+  注意: Classic Gazebo (Gazebo 11以前) のプラグイン (libgazebo_ros_*.so) は
+        使用しません。Gazebo Harmonicのネイティブプラグインを使用し、
+        ros_gz_bridge でROS 2と通信します。
+  ============================================================================
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="grass_chopper">
+
+  <!-- ================================================================== -->
+  <!-- マテリアル定義 (見た目の色)                                       -->
+  <!-- ================================================================== -->
+  <material name="green">
+    <color rgba="0.2 0.7 0.2 1.0"/>
+  </material>
+  <material name="dark_grey">
+    <color rgba="0.3 0.3 0.3 1.0"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.0 0.0 0.8 1.0"/>
+  </material>
+  <material name="red">
+    <color rgba="0.8 0.0 0.0 1.0"/>
+  </material>
+
+  <!-- ================================================================== -->
+  <!-- ロボット寸法パラメータ                                            -->
+  <!-- Xacroのプロパティで一元管理（変更が容易）                        -->
+  <!-- ================================================================== -->
+  <!-- シャーシ（本体）の寸法 [m] -->
+  <xacro:property name="chassis_length" value="0.3"/>
+  <xacro:property name="chassis_width" value="0.2"/>
+  <xacro:property name="chassis_height" value="0.1"/>
+  <xacro:property name="chassis_mass" value="2.0"/>
+
+  <!-- 駆動輪の寸法 [m] -->
+  <xacro:property name="wheel_radius" value="0.05"/>
+  <xacro:property name="wheel_width" value="0.04"/>
+  <xacro:property name="wheel_mass" value="0.3"/>
+
+  <!-- キャスター（受動輪）の寸法 [m] -->
+  <xacro:property name="caster_radius" value="0.025"/>
+  <xacro:property name="caster_mass" value="0.1"/>
+
+  <!-- 車輪間の距離 [m] (差動駆動の旋回に影響) -->
+  <xacro:property name="wheel_separation" value="0.24"/>
+
+  <!-- ================================================================== -->
+  <!-- 慣性テンソル計算マクロ                                            -->
+  <!-- ================================================================== -->
+  <!-- 物理シミュレーションには質量と慣性モーメントが必須です。          -->
+  <!-- これらがないとGazeboがモデルを正しく扱えません。                 -->
+
+  <!-- 直方体の慣性テンソル -->
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${m*(y*y+z*z)/12}" ixy="0.0" ixz="0.0"
+        iyy="${m*(x*x+z*z)/12}" iyz="0.0"
+        izz="${m*(x*x+y*y)/12}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- 円柱の慣性テンソル -->
+  <xacro:macro name="cylinder_inertia" params="m r l">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${m*(3*r*r+l*l)/12}" ixy="0.0" ixz="0.0"
+        iyy="${m*(3*r*r+l*l)/12}" iyz="0.0"
+        izz="${m*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- 球体の慣性テンソル -->
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${2*m*r*r/5}" ixy="0.0" ixz="0.0"
+        iyy="${2*m*r*r/5}" iyz="0.0"
+        izz="${2*m*r*r/5}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ================================================================== -->
+  <!-- base_link: ロボット本体（シャーシ）                               -->
+  <!-- ================================================================== -->
+  <!-- ロボットの中心となるリンク。全ての部品はここを基準に配置される -->
+  <link name="base_link">
+    <!-- 慣性パラメータ（物理計算に必須） -->
+    <xacro:box_inertia m="${chassis_mass}"
+      x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
+    <!-- 見た目（rviz2やGazeboで表示される形状） -->
+    <visual>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <!-- 衝突判定（物理エンジンが使う形状） -->
+    <collision>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ================================================================== -->
+  <!-- 車輪マクロ: 左右の車輪を共通化                                   -->
+  <!-- ================================================================== -->
+  <!-- prefix: "left" or "right"                                         -->
+  <!-- y_offset: 車輪のY軸方向のオフセット（正=左、負=右）             -->
+  <xacro:macro name="wheel" params="prefix y_offset">
+    <link name="${prefix}_wheel_link">
+      <xacro:cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" l="${wheel_width}"/>
+      <visual>
+        <!-- 車輪はY軸方向に配置するため、X軸周りに90度回転 -->
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="dark_grey"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- continuous joint: 無限に回転できるジョイント（車輪に最適） -->
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <!-- 車輪の位置: シャーシ後方、左右にオフセット、地面に接する高さ -->
+      <origin xyz="${-chassis_length/4} ${y_offset} ${-chassis_height/2}"
+              rpy="${-pi/2} 0 0"/>
+      <!-- 回転軸: Z軸（rpy回転後のローカル座標系でY軸=前進方向の回転） -->
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- 左車輪を配置 -->
+  <xacro:wheel prefix="left" y_offset="${wheel_separation/2}"/>
+  <!-- 右車輪を配置 -->
+  <xacro:wheel prefix="right" y_offset="${-wheel_separation/2}"/>
+
+  <!-- ================================================================== -->
+  <!-- キャスター: 前方の受動輪                                         -->
+  <!-- ================================================================== -->
+  <!-- 摩擦ゼロの球体で簡略化（実際のキャスターは自由回転する車輪） -->
+  <link name="caster_link">
+    <xacro:sphere_inertia m="${caster_mass}" r="${caster_radius}"/>
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_link"/>
+    <!-- シャーシ前方、地面に接する位置 -->
+    <origin xyz="${chassis_length/3} 0 ${-chassis_height/2 - caster_radius + 0.001}"
+            rpy="0 0 0"/>
+  </joint>
+
+  <!-- キャスターの摩擦をゼロに設定（滑るように移動） -->
+  <gazebo reference="caster_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <!-- ================================================================== -->
+  <!-- LiDARセンサー: レーザースキャナー                                 -->
+  <!-- ================================================================== -->
+  <!-- 360度の距離データを取得して障害物を検知する -->
+  <link name="lidar_link">
+    <xacro:cylinder_inertia m="0.1" r="0.03" l="0.04"/>
+    <visual>
+      <geometry>
+        <cylinder radius="0.03" length="0.04"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.03" length="0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <!-- シャーシ上面の中央に配置 -->
+    <origin xyz="0 0 ${chassis_height/2 + 0.02}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Harmonic用 LiDARセンサー設定 -->
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_lidar">
+      <!-- 常にアクティブ -->
+      <always_on>true</always_on>
+      <!-- LiDARの光線を可視化（デバッグ用） -->
+      <visualize>true</visualize>
+      <!-- スキャン頻度 [Hz] -->
+      <update_rate>10</update_rate>
+      <!-- Gazebo側のトピック名（ros_gz_bridgeで/scanに変換） -->
+      <topic>scan</topic>
+      <!-- TFフレームID -->
+      <gz_frame_id>lidar_link</gz_frame_id>
+      <ray>
+        <scan>
+          <horizontal>
+            <!-- 360サンプルで360度スキャン（1度刻み） -->
+            <samples>360</samples>
+            <resolution>1.0</resolution>
+            <!-- -180度 ～ +180度（全方位） -->
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <!-- 検出可能距離: 0.12m ～ 10.0m -->
+          <min>0.12</min>
+          <max>10.0</max>
+          <!-- 距離分解能 [m] -->
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+    </sensor>
+  </gazebo>
+
+  <!-- ================================================================== -->
+  <!-- カメラセンサー: RGB画像撮影                                      -->
+  <!-- ================================================================== -->
+  <link name="camera_link">
+    <xacro:box_inertia m="0.05" x="0.02" y="0.04" z="0.04"/>
+    <visual>
+      <geometry>
+        <box size="0.02 0.04 0.04"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.02 0.04 0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <!-- シャーシ前面の上部に配置（前方を向く） -->
+    <origin xyz="${chassis_length/2} 0 ${chassis_height/4}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Harmonic用 カメラセンサー設定 -->
+  <gazebo reference="camera_link">
+    <sensor name="camera" type="camera">
+      <always_on>true</always_on>
+      <!-- フレームレート [fps] -->
+      <update_rate>30.0</update_rate>
+      <!-- Gazebo側のトピック名 -->
+      <topic>camera/image_raw</topic>
+      <gz_frame_id>camera_link</gz_frame_id>
+      <camera>
+        <!-- 水平視野角 [rad] (約60度) -->
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <!-- 撮影可能距離: 0.1m ～ 100m -->
+          <near>0.1</near>
+          <far>100</far>
+        </clip>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <!-- ================================================================== -->
+  <!-- Gazebo Harmonicプラグイン                                         -->
+  <!-- ================================================================== -->
+
+  <!-- 差動駆動プラグイン -->
+  <!-- 左右の車輪の回転差で前進・旋回を制御する -->
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <!-- 左右の車輪ジョイント名 -->
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <!-- 車輪間の距離 [m] -->
+      <wheel_separation>${wheel_separation}</wheel_separation>
+      <!-- 車輪の半径 [m] -->
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <!-- オドメトリの発行頻度 [Hz] -->
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <!-- 速度指令を受け取るトピック（ros_gz_bridgeで/cmd_velから変換） -->
+      <topic>cmd_vel</topic>
+      <!-- オドメトリトピック -->
+      <odom_topic>odom</odom_topic>
+      <!-- TFフレーム名 -->
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+    </plugin>
+  </gazebo>
+
+  <!-- 関節状態パブリッシャー -->
+  <!-- 車輪の回転角度をROS 2に送信（robot_state_publisherが使用） -->
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+    </plugin>
+  </gazebo>
+
+</robot>

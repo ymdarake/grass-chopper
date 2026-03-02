@@ -1,0 +1,162 @@
+#cloud-config
+# ============================================================================
+# ROS 2 Jazzy + Gazebo Harmonic 開発環境 cloud-init設定
+# ============================================================================
+# このファイルはMultipass VMの初期設定を自動化します。
+# 以下をインストール・設定します:
+#   - ROS 2 Jazzy (ロボット開発フレームワーク)
+#   - Gazebo Harmonic (物理シミュレーター)
+#   - noVNC (ブラウザ経由でGUIにアクセスするためのツール)
+#
+# 使い方:
+#   multipass launch 24.04 --name ros2-vm --cloud-init setup.yaml \
+#     --cpus 4 --memory 8G --disk 30G
+# ============================================================================
+
+# --- パッケージの更新 ---
+# VM起動時にAPTパッケージリストを最新に更新する
+package_update: true
+# インストール済みパッケージをアップグレードする
+package_upgrade: true
+
+# --- 基本パッケージのインストール ---
+# cloud-initが直接インストールできるパッケージ
+# (ROS 2やGazeboは専用リポジトリが必要なため、runcmdでインストール)
+packages:
+  # 基本ツール
+  - curl
+  - gnupg
+  - lsb-release
+  - wget
+  - software-properties-common
+  # 仮想デスクトップ環境
+  - xvfb           # 仮想フレームバッファ (画面がなくてもGUIを動かせる)
+  - lxde           # 軽量デスクトップ環境
+  - x11vnc         # VNCサーバー (画面をネットワーク共有)
+  - novnc          # ブラウザベースのVNCクライアント
+  - websockify     # WebSocket→TCP変換 (noVNCとx11vncを繋ぐ)
+
+# --- ファイルの作成 ---
+# VM内にスクリプトやサービス定義ファイルを配置する
+write_files:
+  # 仮想デスクトップ起動スクリプト
+  # Xvfb(仮想画面) → LXDE(デスクトップ) → x11vnc(VNC) → websockify(noVNC)
+  # の順に起動して、ブラウザからアクセスできるようにする
+  - path: /usr/local/bin/start-vnc-desktop.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # === 仮想デスクトップ + noVNC 起動スクリプト ===
+
+      # 仮想ディスプレイ番号を設定
+      export DISPLAY=:0
+
+      # 1. Xvfb (仮想フレームバッファ) を起動
+      #    - :0 はディスプレイ番号
+      #    - 1280x800 は解像度、24はカラービット深度
+      Xvfb :0 -screen 0 1280x800x24 &
+      sleep 2
+
+      # 2. LXDE デスクトップ環境を起動
+      #    - 仮想ディスプレイ上にデスクトップを描画する
+      startlxde &
+      sleep 2
+
+      # 3. x11vnc (VNCサーバー) を起動
+      #    - パスワード認証を設定（デフォルト: "ubuntu"）
+      #    - -listen localhost: ローカルホストからの接続のみ許可（セキュリティ）
+      #    - -forever: クライアント切断後もサーバーを終了しない
+      mkdir -p ~/.vnc
+      x11vnc -storepasswd "${VNC_PASSWORD:-ubuntu}" ~/.vnc/passwd
+      x11vnc -display :0 -rfbauth ~/.vnc/passwd -listen localhost -xkb -ncache 10 -ncache_cr -forever &
+      sleep 1
+
+      # 4. websockify 経由で noVNC を提供
+      #    - ポート6080でブラウザからの接続を受け付け
+      #    - localhost:5900 のVNCサーバーに転送
+      websockify --web=/usr/share/novnc/ 6080 localhost:5900
+
+  # Systemdサービス定義
+  # VM起動時に仮想デスクトップを自動起動するための設定
+  - path: /etc/systemd/system/vnc-desktop.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Virtual Desktop and noVNC Service
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=ubuntu
+      Environment=HOME=/home/ubuntu
+      Environment=USER=ubuntu
+      # ソフトウェアレンダリングを強制（VM内にGPUがないため）
+      Environment=LIBGL_ALWAYS_SOFTWARE=1
+      ExecStart=/usr/local/bin/start-vnc-desktop.sh
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+# --- コマンドの実行 ---
+# VM初回起動時に実行されるコマンド（上から順に実行）
+runcmd:
+  # =============================================
+  # 1. ROS 2 Jazzy リポジトリの追加
+  # =============================================
+  # GPGキーをダウンロードして信頼済みキーとして保存
+  - curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.asc
+  # APTソースリストにROS 2リポジトリを追加
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.asc] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+  # =============================================
+  # 2. Gazebo Harmonic リポジトリの追加
+  # =============================================
+  # OSRFのGPGキーをダウンロード
+  - curl -sSL https://packages.osrfoundation.org/gazebo.gpg -o /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+  # APTソースリストにGazeboリポジトリを追加
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+
+  # =============================================
+  # 3. パッケージのインストール
+  # =============================================
+  # リポジトリ追加後にパッケージリストを更新
+  - apt-get update
+  # ROS 2 Desktop (基本ツール一式 + rviz2 + rqt等)
+  # ros-dev-tools (colcon, rosdep等のビルドツール)
+  # gz-harmonic (Gazebo Harmonicシミュレーター)
+  # ros-jazzy-ros-gz (ROS 2とGazeboを繋ぐブリッジパッケージ)
+  - apt-get install -y ros-jazzy-desktop ros-dev-tools gz-harmonic ros-jazzy-ros-gz
+
+  # =============================================
+  # 4. rosdep の初期化
+  # =============================================
+  # rosdep: ROS 2パッケージの依存関係を自動解決するツール
+  - rosdep init || true
+  - sudo -u ubuntu bash -c "source /opt/ros/jazzy/setup.bash && rosdep update"
+
+  # =============================================
+  # 5. 環境変数の設定
+  # =============================================
+  # ubuntuユーザーのbashrcにROS 2の環境設定を追加
+  # これにより、ターミナルを開くたびにROS 2コマンドが使えるようになる
+  - echo "source /opt/ros/jazzy/setup.bash" >> /home/ubuntu/.bashrc
+  # ソフトウェアレンダリングを強制（VM内にGPUがないため必須）
+  - echo "export LIBGL_ALWAYS_SOFTWARE=1" >> /home/ubuntu/.bashrc
+  # Gazebo Harmonicのモデルパスを設定
+  - echo "export GZ_SIM_RESOURCE_PATH=~/weeder_ws/src" >> /home/ubuntu/.bashrc
+
+  # =============================================
+  # 6. ワークスペースの作成
+  # =============================================
+  # ROS 2ワークスペースのsrcディレクトリを作成
+  - sudo -u ubuntu mkdir -p /home/ubuntu/weeder_ws/src
+
+  # =============================================
+  # 7. 仮想デスクトップサービスの有効化と起動
+  # =============================================
+  # Systemdサービスを再読み込みして新しいサービスを認識させる
+  - systemctl daemon-reload
+  # VM起動時の自動起動を有効化し、今すぐ起動する
+  - systemctl enable --now vnc-desktop.service

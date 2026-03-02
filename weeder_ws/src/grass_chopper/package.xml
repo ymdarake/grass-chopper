@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  ============================================================================
+  grass_chopper パッケージ定義
+  ============================================================================
+  ROS 2パッケージの依存関係やメタ情報を定義するファイルです。
+  colcon build 時にこのファイルを参照してビルド順序が決定されます。
+  ============================================================================
+-->
+<package format="3">
+  <name>grass_chopper</name>
+  <version>0.1.0</version>
+  <description>
+    草刈りロボットのシミュレーション。
+    LiDARで障害物を検知しながら自律走行するロボットを
+    Gazebo Harmonic上で動かします。
+  </description>
+  <maintainer email="you@example.com">developer</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- ビルドツール: ament_python (Pythonパッケージ用) -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- 実行時に必要なROS 2パッケージ -->
+  <!-- rclpy: ROS 2のPythonクライアントライブラリ -->
+  <depend>rclpy</depend>
+  <!-- geometry_msgs: Twist (速度指令) 等の幾何学メッセージ -->
+  <depend>geometry_msgs</depend>
+  <!-- sensor_msgs: LaserScan, Image 等のセンサーメッセージ -->
+  <depend>sensor_msgs</depend>
+
+  <!-- 実行時のみ必要なパッケージ (ビルドには不要) -->
+  <!-- ros_gz_sim: Gazebo Harmonicの起動とモデルスポーン -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <!-- ros_gz_bridge: ROS 2とGazebo間のトピックブリッジ -->
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <!-- robot_state_publisher: URDFからTFを発行 -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <!-- xacro: .xacroファイルをURDFに変換 -->
+  <exec_depend>xacro</exec_depend>
+
+  <!-- テストフレームワーク -->
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

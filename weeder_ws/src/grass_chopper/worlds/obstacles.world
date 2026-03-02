@@ -1,0 +1,199 @@
+<?xml version="1.0" ?>
+<!--
+  ============================================================================
+  Gazebo Harmonic ワールドファイル: 障害物回避テスト環境
+  ============================================================================
+  このファイルはGazeboシミュレーターのワールド（仮想世界）を定義します。
+  地面、太陽光、そして障害物となるボックスを配置しています。
+
+  Gazebo Harmonicでは、物理演算やセンサーを動かすために
+  「プラグイン」を明示的に読み込む必要があります。
+  ============================================================================
+-->
+<sdf version="1.8">
+  <world name="obstacle_world">
+
+    <!-- =================================================================== -->
+    <!-- 必須プラグインの読み込み                                            -->
+    <!-- これらがないと物理演算やセンサーが動作しません                      -->
+    <!-- =================================================================== -->
+
+    <!-- 物理エンジン: 重力や衝突を計算する -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+
+    <!-- ユーザーコマンド: GUIからモデルを移動・削除する機能 -->
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+
+    <!-- シーンブロードキャスター: 3D描画情報をGUIに送信する -->
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+
+    <!-- センサーシステム: LiDARやカメラなどのセンサーを動作させる -->
+    <!-- render_engine: 描画エンジンにogre2を使用 -->
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- =================================================================== -->
+    <!-- 太陽光                                                              -->
+    <!-- =================================================================== -->
+    <!-- ワールドを照らす平行光源（太陽のような光） -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <!-- 拡散光の色 (RGBA) -->
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <!-- 鏡面反射光の色 -->
+      <specular>0.2 0.2 0.2 1</specular>
+      <!-- 光の減衰設定 -->
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <!-- 光の向き (斜め上から照射) -->
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- =================================================================== -->
+    <!-- 地面                                                                -->
+    <!-- =================================================================== -->
+    <!-- 無限に広がる平面。staticなので物理計算の対象外 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <!-- 衝突判定用のジオメトリ（ロボットが地面の上を走れるように） -->
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <!-- 見た目のジオメトリ（緑色で草をイメージ） -->
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.3 0.7 0.3 1</ambient>
+            <diffuse>0.3 0.7 0.3 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 1: 正面のボックス                                           -->
+    <!-- =================================================================== -->
+    <!-- ロボットの前方2mの位置に赤いボックスを配置 -->
+    <model name="obstacle_1">
+      <pose>2.0 0.0 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.5 0.5 0.5</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.5 0.5 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.1 0.1 1</ambient>
+            <diffuse>0.8 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 2: 左前方のボックス                                         -->
+    <!-- =================================================================== -->
+    <!-- ロボットの左前方に青いボックスを配置 -->
+    <model name="obstacle_2">
+      <pose>3.0 1.5 0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.6 0.6 0.6</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.6 0.6 0.6</size></box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.8 1</ambient>
+            <diffuse>0.1 0.1 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 3: 右前方のボックス                                         -->
+    <!-- =================================================================== -->
+    <!-- ロボットの右前方に黄色いボックスを配置 -->
+    <model name="obstacle_3">
+      <pose>4.0 -1.0 0.4 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.8 0.8 0.8</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.8 0.8 0.8</size></box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.1 1</ambient>
+            <diffuse>0.8 0.8 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 4: 遠方の壁                                                 -->
+    <!-- =================================================================== -->
+    <!-- ロボットの前方6mの位置に長い壁を配置 -->
+    <model name="obstacle_wall">
+      <pose>6.0 0.0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.3 4.0 1.0</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.3 4.0 1.0</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
