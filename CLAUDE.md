@@ -110,7 +110,7 @@ ros2 launch grass_chopper sim_launch.py
 ### テスト実行
 
 ```bash
-# Mac ホストで純粋ロジックテスト (rclpy 不要, 39テスト)
+# Mac ホストで純粋ロジックテスト (rclpy 不要, 41テスト)
 make test-pure
 
 # 構文チェック

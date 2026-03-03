@@ -224,17 +224,15 @@ class WeederNode(Node):
         )
         return analyze_zones(list(msg.ranges), scan_config)
 
-    def _update_state(self, zones: dict):
+    def _update_state(self, zones: dict, params: AvoidanceParams):
         """ゾーン情報に基づいて状態を遷移させる (返り値で self.state 更新)"""
-        params = self._get_params()
         new_state, wall_error_reset = update_state(self.state, zones, params)
         self.state = new_state
         if wall_error_reset:
             self.prev_wall_error = 0.0
 
-    def _compute_twist(self, zones: dict) -> Twist:
+    def _compute_twist(self, zones: dict, params: AvoidanceParams) -> Twist:
         """現在の状態に応じた Twist メッセージを生成する (TwistCommand → Twist 変換)"""
-        params = self._get_params()
         cmd, new_error = compute_twist(self.state, zones, self.prev_wall_error, params)
         self.prev_wall_error = new_error
 
@@ -251,8 +249,9 @@ class WeederNode(Node):
             return
 
         zones = self._analyze_zones(msg)
-        self._update_state(zones)
-        twist = self._compute_twist(zones)
+        params = self._get_params()
+        self._update_state(zones, params)
+        twist = self._compute_twist(zones, params)
 
         if self.state != RobotState.FORWARD:
             self.get_logger().info(
