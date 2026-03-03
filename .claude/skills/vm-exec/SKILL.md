@@ -24,7 +24,7 @@ multipass exec ros2-vm -- bash -c '<commands>'
 ### ROS 2 コマンド (source 必須)
 
 ```bash
-multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_ws/install/setup.bash && <ros2-command>'
+multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && <ros2-command>'
 ```
 
 ## よく使うコマンド
@@ -32,13 +32,13 @@ multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/
 ### ビルド
 
 ```bash
-multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && cd ~/weeder_ws && colcon build --symlink-install'
+multipass exec ros2-vm -- bash -c 'mkdir -p ~/weeder_build && source /opt/ros/jazzy/setup.bash && cd ~/weeder_ws && colcon --log-base ~/weeder_build/log build --symlink-install --build-base ~/weeder_build/build --install-base ~/weeder_build/install'
 ```
 
 ### シミュレーション起動 (バックグラウンド)
 
 ```bash
-multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_ws/install/setup.bash && ros2 launch grass_chopper sim_launch.py'
+multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 launch grass_chopper sim_launch.py'
 ```
 
 Bash ツールの `run_in_background: true` で実行する。停止は `TaskStop` を使う。
@@ -73,5 +73,5 @@ multipass transfer <local-path> ros2-vm:<remote-path>
 ## 注意事項
 
 - ROS 2 コマンドは必ず `source /opt/ros/jazzy/setup.bash` を先行
-- 自作パッケージ使用時は `source ~/weeder_ws/install/setup.bash` も追加
+- 自作パッケージ使用時は `source ~/weeder_build/install/setup.bash` も追加
 - VM 未起動なら `multipass start ros2-vm` で起動

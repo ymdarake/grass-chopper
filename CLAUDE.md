@@ -87,6 +87,8 @@ GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states
 - **リソース**: 4 CPU / 8GB RAM / 30GB Disk
 - **noVNC**: ポート 6080、VNC パスワード `ubuntu`
 - **レンダリング**: `LIBGL_ALWAYS_SOFTWARE=1` (ソフトウェアレンダリング)
+- **マウント**: ホスト `weeder_ws/` → VM `~/weeder_ws/` (ソース同期)
+- **ビルド成果物**: VM ローカルの `~/weeder_build/` に出力 (マウント先はパーミッション制約あり)
 
 ## ビルドと実行
 
@@ -125,7 +127,8 @@ multipass transfer <local-path> ros2-vm:<remote-path>
 
 ### GUI 操作 (Playwright MCP + noVNC)
 
-noVNC URL: `http://localhost:6080/vnc.html?autoconnect=true&password=ubuntu`
+noVNC URL: `http://<VM_IP>:6080/vnc.html?autoconnect=true&password=ubuntu`
+（VM IP は `multipass info ros2-vm` で確認）
 
 Playwright MCP ツールで noVNC にアクセスし、Gazebo / RViz の画面を確認・操作する。
 設定は `.mcp.json` に定義済み。
