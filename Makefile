@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure vm-build vm-sim vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure vm-build vm-sim vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -11,11 +11,15 @@ test-pure:
 ## VM 内で ROS 2 ワークスペースをビルド
 ## ※ マウント先にはビルド成果物を置けないため ~/weeder_build に出力
 vm-build:
-	multipass exec ros2-vm -- bash -c 'mkdir -p ~/weeder_build && source /opt/ros/jazzy/setup.bash && cd ~/weeder_ws && colcon --log-base ~/weeder_build/log build --symlink-install --build-base ~/weeder_build/build --install-base ~/weeder_build/install'
+	multipass exec ros2-vm -- bash -c 'mkdir -p ~/weeder_build && source /opt/ros/jazzy/setup.bash && cd ~/weeder_ws && COLCON_LOG_PATH=/tmp/colcon_log colcon build --build-base ~/weeder_build/build --install-base ~/weeder_build/install'
 
 ## VM 内でシミュレーション起動
 vm-sim:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py'
+
+## VM 停止
+vm-stop:
+	multipass stop ros2-vm
 
 ## VM 情報表示
 vm-info:
