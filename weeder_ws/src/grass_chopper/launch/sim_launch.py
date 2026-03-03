@@ -121,11 +121,13 @@ def generate_launch_description():
     # 5. 障害物回避ノード
     # ===================================================================
     # LiDARデータを使って障害物を回避しながら前進するノード
+    # config/weeder_params.yaml からパラメータを読み込む
+    weeder_params_file = os.path.join(pkg_share, 'config', 'weeder_params.yaml')
     weeder_node = Node(
         package='grass_chopper',
         executable='weeder_node',
         output='screen',
-        parameters=[{'use_sim_time': True}]
+        parameters=[weeder_params_file, {'use_sim_time': True}]
     )
 
     # --- 全ノードをまとめて返す ---

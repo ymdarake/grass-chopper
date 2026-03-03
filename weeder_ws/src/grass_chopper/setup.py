@@ -38,6 +38,9 @@ setup(
         # World ファイルをコピー
         (os.path.join('share', package_name, 'worlds'),
             glob(os.path.join('worlds', '*.world'))),
+        # パラメータ設定ファイルをコピー
+        (os.path.join('share', package_name, 'config'),
+            glob(os.path.join('config', '*.yaml'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -1,0 +1,11 @@
+weeder_node:
+  ros__parameters:
+    safe_distance: 0.5          # 障害物検知の安全距離 [m]
+    forward_speed: 0.2          # 前進速度 [m/s]
+    turn_speed: 0.5             # 回転速度 [rad/s]
+    wall_target_distance: 0.5   # 壁との目標距離 [m]
+    wall_follow_kp: 1.5         # 壁沿い PD制御の比例ゲイン
+    wall_follow_kd: 0.3         # 壁沿い PD制御の微分ゲイン
+    wall_follow_speed: 0.15     # 壁沿い走行時の前進速度 [m/s]
+    angular_z_limit: 0.8        # 角速度の上限 [rad/s]
+    u_turn_speed: 1.0           # Uターン時の回転速度 [rad/s]
