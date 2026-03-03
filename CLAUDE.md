@@ -127,8 +127,15 @@ multipass transfer <local-path> ros2-vm:<remote-path>
 
 ### GUI 操作 (Playwright MCP + noVNC)
 
-noVNC URL: `http://<VM_IP>:6080/vnc.html?autoconnect=true&password=ubuntu`
-（VM IP は `multipass info ros2-vm` で確認）
+Multipass VM の仮想ネットワーク (192.168.64.x) はブラウザから直接アクセスできない。
+ポートフォワードで localhost 経由にする:
+
+```bash
+# ポートフォワード開始 (別ターミナル or バックグラウンド)
+make vm-forward
+```
+
+noVNC URL: `http://localhost:6080/vnc.html?autoconnect=true&password=ubuntu`
 
 Playwright MCP ツールで noVNC にアクセスし、Gazebo / RViz の画面を確認・操作する。
 設定は `.mcp.json` に定義済み。

@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure vm-build vm-sim vm-info vm-topics
+.PHONY: check-syntax test-pure vm-build vm-sim vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -24,3 +24,8 @@ vm-info:
 ## ROS 2 トピック一覧
 vm-topics:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && ros2 topic list'
+
+## noVNC ポートフォワード (localhost:6080 -> VM:6080)
+## ブラウザから VM の仮想ネットワークに直接アクセスできない場合に使用
+vm-forward:
+	python3 scripts/port_forward.py
