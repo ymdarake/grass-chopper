@@ -35,9 +35,14 @@ grass-chopper/
     ├── test/
     │   ├── test_obstacle_avoidance.py      # 純粋ロジックテスト (Mac で実行可)
     │   └── test_weeder_node.py             # VM 統合テスト (rclpy 必要)
-    ├── launch/sim_launch.py                # 一括起動
+    ├── config/
+    │   ├── weeder_params.yaml              # 障害物回避パラメータ
+    │   └── mapper_params_online_async.yaml # SLAM パラメータ (Phase 3)
+    ├── launch/sim_launch.py                # 一括起動 (Gazebo + SLAM + weeder_node)
     ├── urdf/robot_description.urdf.xacro   # ロボットモデル
-    └── worlds/obstacles.world              # Gazebo World
+    └── worlds/
+        ├── obstacles.world                 # 障害物回避テスト環境
+        └── slam_test.world                 # SLAM ループクロージャ検証環境
 ```
 
 ## アーキテクチャ原則
@@ -52,7 +57,7 @@ grass-chopper/
 
 ```
 ROS → GZ (指令):  /cmd_vel
-GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states
+GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states, /tf
 ```
 
 ## コーディング規約

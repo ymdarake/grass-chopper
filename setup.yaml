@@ -130,6 +130,8 @@ runcmd:
   # gz-harmonic (Gazebo Harmonicシミュレーター)
   # ros-jazzy-ros-gz (ROS 2とGazeboを繋ぐブリッジパッケージ)
   - apt-get install -y ros-jazzy-desktop ros-dev-tools gz-harmonic ros-jazzy-ros-gz
+  # Phase 3: SLAM 関連パッケージ
+  - apt-get install -y ros-jazzy-slam-toolbox ros-jazzy-nav2-map-server ros-jazzy-tf2-tools
 
   # =============================================
   # 4. rosdep の初期化

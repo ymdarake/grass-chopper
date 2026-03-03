@@ -19,7 +19,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
@@ -114,6 +114,8 @@ def generate_launch_description():
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             # 関節状態: Gazebo → ROS 2 (車輪の回転角度)
             '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
+            # TF: Gazebo → ROS 2 (odom→base_link 座標変換, Phase 3 SLAM用)
+            '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
         ]
     )
 
@@ -130,11 +132,35 @@ def generate_launch_description():
         parameters=[weeder_params_file, {'use_sim_time': True}]
     )
 
+    # ===================================================================
+    # 6. SLAM Toolbox (Phase 3: 自己位置推定と地図作成)
+    # ===================================================================
+    # slam_toolbox の online_async モードで、走行しながら2D地図を生成する
+    # /scan と /odom, /tf を使ってスキャンマッチングベースの SLAM を実行
+    slam_params_file = os.path.join(pkg_share, 'config',
+                                    'mapper_params_online_async.yaml')
+
+    slam_toolbox = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('slam_toolbox'),
+                'launch',
+                'online_async_launch.py'
+            )
+        ),
+        launch_arguments={
+            'use_sim_time': 'true',
+            'slam_params_file': slam_params_file,
+        }.items()
+    )
+
     # --- 全ノードをまとめて返す ---
+    # slam_toolbox は TF が揃ってから起動するため、TimerAction で遅延起動
     return LaunchDescription([
         gazebo,
         robot_state_publisher,
         spawn_entity,
         bridge,
         weeder_node,
+        TimerAction(period=5.0, actions=[slam_toolbox]),
     ])

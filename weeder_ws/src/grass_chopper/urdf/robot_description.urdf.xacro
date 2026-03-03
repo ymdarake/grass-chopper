@@ -287,8 +287,8 @@
   <gazebo reference="camera_link">
     <sensor name="camera" type="camera">
       <always_on>true</always_on>
-      <!-- フレームレート [fps] -->
-      <update_rate>30.0</update_rate>
+      <!-- フレームレート [fps] (ソフトウェアレンダリングの負荷軽減のため低めに設定) -->
+      <update_rate>5.0</update_rate>
       <!-- Gazebo側のトピック名 -->
       <topic>camera/image_raw</topic>
       <gz_frame_id>camera_link</gz_frame_id>
@@ -334,6 +334,8 @@
       <!-- TFフレーム名 -->
       <frame_id>odom</frame_id>
       <child_frame_id>base_link</child_frame_id>
+      <!-- TFトピック名: ros_gz_bridge で /tf として直接ブリッジ可能にする -->
+      <tf_topic>/tf</tf_topic>
     </plugin>
   </gazebo>
 
