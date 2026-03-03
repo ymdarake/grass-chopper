@@ -17,6 +17,10 @@ Multipass VM + noVNC で Mac ブラウザだけで動作する。
 
 ```
 grass-chopper/
+├── .mcp.json                               # MCP サーバー設定 (Playwright)
+├── .claude/skills/                         # Claude Code スキル
+│   ├── vm-exec/SKILL.md                    # VM コマンド実行スキル
+│   └── sim-screenshot/SKILL.md             # シミュレーション撮影スキル
 ├── setup.yaml                              # cloud-init (VM自動構築)
 ├── run_sim.sh                              # VM起動スクリプト
 ├── docs/
@@ -91,13 +95,48 @@ GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states
 bash run_sim.sh
 
 # VM 内でビルド
-multipass exec ros2-vm -- bash -c \
-  'source /opt/ros/jazzy/setup.bash && cd ~/weeder_ws && colcon build --symlink-install'
+make vm-build
 
-# VM 内でシミュレーション起動
-source ~/weeder_ws/install/setup.bash
-ros2 launch grass_chopper sim_launch.py
+# VM 内でシミュレーション起動 (バックグラウンド)
+make vm-sim
 ```
+
+## VM + ブラウザ ワークフロー
+
+### スキル
+
+| スキル | 用途 |
+|--------|------|
+| `/vm-exec` | VM 内でコマンド実行 (ビルド, ROS 2 コマンド等) |
+| `/sim-screenshot` | noVNC 経由で Gazebo 画面を撮影 |
+
+### CLI 操作 (multipass)
+
+```bash
+# VM 内でコマンド実行
+multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && <command>'
+
+# VM 状態確認
+multipass info ros2-vm
+
+# ファイル転送 (ホスト → VM)
+multipass transfer <local-path> ros2-vm:<remote-path>
+```
+
+### GUI 操作 (Playwright MCP + noVNC)
+
+noVNC URL: `http://localhost:6080/vnc.html?autoconnect=true&password=ubuntu`
+
+Playwright MCP ツールで noVNC にアクセスし、Gazebo / RViz の画面を確認・操作する。
+設定は `.mcp.json` に定義済み。
+
+### 典型的な開発フロー
+
+1. Mac ホストでコード編集 + `make test-pure` で純粋ロジックテスト
+2. `make vm-build` で VM 内ビルド
+3. `make vm-sim` でシミュレーション起動
+4. `/sim-screenshot` で Gazebo 画面を確認
+5. `/vm-exec` で ROS 2 トピック監視 (`ros2 topic echo /scan --once` 等)
 
 ## テスト方針
 
