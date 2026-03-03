@@ -82,6 +82,12 @@ GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states, 
   - `gz-sim-scene-broadcaster-system`
   - `gz-sim-sensors-system` (render_engine: ogre2)
 
+### Launch ファイル (Python)
+
+- `OpaqueFunction` 内で `TimerAction` を使って LifecycleNode (slam_toolbox 等) を遅延起動すると、autostart の状態遷移 (configure → activate) がブロックされる。LifecycleNode は `OpaqueFunction` の return リストに直接含めること
+- 閉じた環境 (slam_test.world 等) では、ロボットのスポーン位置 (`-x`, `-y`) を必ず指定する。デフォルト (0,0) だと壁の内側にスポーンする事故が起きる
+- `LaunchConfiguration` の値を `os.path.join` 等の Python 文字列操作で使うには `OpaqueFunction` + `.perform(context)` パターンが必要
+
 ### cloud-init (setup.yaml)
 
 - APT リポジトリの追加は `runcmd` で実行 (packages セクションでは不可)
@@ -94,6 +100,47 @@ GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states, 
 - **レンダリング**: `LIBGL_ALWAYS_SOFTWARE=1` (ソフトウェアレンダリング)
 - **マウント**: ホスト `weeder_ws/` → VM `~/weeder_ws/` (ソース同期)
 - **ビルド成果物**: VM ローカルの `~/weeder_build/` に出力 (マウント先はパーミッション制約あり)
+
+## VM トラブルシューティング
+
+### DISPLAY 番号の不一致
+
+VNC サービス再起動後、Xvfb の DISPLAY 番号が `:99` → `:0` に変わることがある。
+Gazebo 起動時に `qt.qpa.xcb: could not connect to display` エラーが出たら確認:
+
+```bash
+# 現在の DISPLAY 番号を検出
+multipass exec ros2-vm -- bash -c 'ps aux | grep Xvfb | grep -v grep'
+# 例: Xvfb :0 -screen 0 1280x800x24  → DISPLAY=:0 を使う
+```
+
+### 残留プロセスの一括停止
+
+シミュレーションを再起動する前に、前回の残留プロセスを必ず停止する。
+`parameter_bridge` 等が残留すると、新しいシミュレーションが正常に起動しない:
+
+```bash
+multipass exec ros2-vm -- bash -c 'killall -9 parameter_bridge ruby gz sim ros2 weeder_node robot_state_publisher 2>/dev/null; sleep 1; echo "cleaned"'
+```
+
+### colcon ビルドのマウント制約
+
+Multipass マウント上では以下の制約がある:
+
+- **`--symlink-install` 禁止**: マウント上でシンボリックリンクが root 所有になり壊れる
+- **`COLCON_LOG_PATH`**: ログディレクトリを VM ローカルに設定 (`/tmp/colcon_log`)
+- **ビルド成果物**: `~/weeder_build/` (VM ローカル) に出力
+
+### map_saver_cli の使い方
+
+SLAM で生成した地図を保存する際の注意:
+
+```bash
+ros2 run nav2_map_server map_saver_cli -f ~/maps/map_name -t map --ros-args -p use_sim_time:=true
+```
+
+- `-t map` オプションが必要（省略すると保存されない）
+- `use_sim_time:=true` を忘れるとタイムスタンプ不一致で失敗する
 
 ## ビルドと実行
 

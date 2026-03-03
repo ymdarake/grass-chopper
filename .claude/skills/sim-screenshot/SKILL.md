@@ -73,6 +73,7 @@ VNC 画面内の Gazebo GUI を操作する場合:
 | ポートフォワードしても接続不可 | `multipass info ros2-vm` で VM 起動確認。`multipass exec ros2-vm -- systemctl status vnc-desktop` でサービス確認 |
 | 画面が黒い | シミュレーション未起動。vm-exec で `ros2 launch grass_chopper sim_launch.py` を実行 |
 | 画面がノイズ | `multipass exec ros2-vm -- sudo systemctl restart vnc-desktop.service` で再起動 |
+| Gazebo 起動失敗 (display error) | VNC 再起動後に DISPLAY 番号が変わった可能性あり。`multipass exec ros2-vm -- bash -c 'ps aux \| grep Xvfb \| grep -v grep'` で確認し、正しい DISPLAY で再起動 |
 | ブラウザ未インストール | `mcp__playwright__browser_install` を実行 |
 
 ## 接続情報
