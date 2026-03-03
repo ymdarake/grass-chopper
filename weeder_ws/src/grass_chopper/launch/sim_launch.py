@@ -12,6 +12,7 @@
 
 使い方:
   ros2 launch grass_chopper sim_launch.py
+  ros2 launch grass_chopper sim_launch.py world:=slam_test.world x:=0.0 y:=-4.0
 ============================================================================
 """
 
@@ -19,17 +20,23 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 import xacro
 
 
-def generate_launch_description():
-    """LaunchDescriptionを生成する関数（ROS 2 launchシステムが呼び出す）"""
+def _launch_setup(context, *args, **kwargs):
+    """Launch引数を解決してノードを構築する"""
 
     # --- パッケージのパスを取得 ---
     pkg_share = get_package_share_directory('grass_chopper')
+
+    # --- Launch引数の解決 ---
+    world_name = LaunchConfiguration('world').perform(context)
+    spawn_x = LaunchConfiguration('x').perform(context)
+    spawn_y = LaunchConfiguration('y').perform(context)
 
     # --- URDF/Xacroファイルの読み込みと変換 ---
     # .xacro ファイルをXMLに変換してロボットの記述を取得
@@ -38,7 +45,7 @@ def generate_launch_description():
     robot_description = {'robot_description': robot_description_config.toxml()}
 
     # --- Worldファイルのパス ---
-    world_file = os.path.join(pkg_share, 'worlds', 'obstacles.world')
+    world_file = os.path.join(pkg_share, 'worlds', world_name)
 
     # ===================================================================
     # 1. Gazebo Harmonic の起動
@@ -84,6 +91,8 @@ def generate_launch_description():
         arguments=[
             '-topic', 'robot_description',  # URDFの取得元トピック
             '-name', 'grass_chopper',        # Gazebo内でのモデル名
+            '-x', spawn_x,                   # X軸の初期位置 [m]
+            '-y', spawn_y,                   # Y軸の初期位置 [m]
             '-z', '0.1'                      # Z軸の初期位置 [m]
         ]
     )
@@ -155,12 +164,24 @@ def generate_launch_description():
     )
 
     # --- 全ノードをまとめて返す ---
-    # slam_toolbox は TF が揃ってから起動するため、TimerAction で遅延起動
-    return LaunchDescription([
+    return [
         gazebo,
         robot_state_publisher,
         spawn_entity,
         bridge,
         weeder_node,
-        TimerAction(period=5.0, actions=[slam_toolbox]),
+        slam_toolbox,
+    ]
+
+
+def generate_launch_description():
+    """LaunchDescriptionを生成する関数（ROS 2 launchシステムが呼び出す）"""
+    return LaunchDescription([
+        DeclareLaunchArgument('world', default_value='obstacles.world',
+                              description='ワールドファイル名 (worlds/ 内)'),
+        DeclareLaunchArgument('x', default_value='0.0',
+                              description='ロボットの初期X座標 [m]'),
+        DeclareLaunchArgument('y', default_value='0.0',
+                              description='ロボットの初期Y座標 [m]'),
+        OpaqueFunction(function=_launch_setup),
     ])
