@@ -25,7 +25,12 @@ grass-chopper/
 └── weeder_ws/src/grass_chopper/            # ROS 2パッケージ
     ├── package.xml
     ├── setup.py / setup.cfg
-    ├── grass_chopper/weeder_node.py        # 障害物回避ノード
+    ├── grass_chopper/
+    │   ├── obstacle_avoidance.py           # 純粋計算ロジック (ROS 2 非依存)
+    │   └── weeder_node.py                  # ROS 2 アダプター (薄いラッパー)
+    ├── test/
+    │   ├── test_obstacle_avoidance.py      # 純粋ロジックテスト (Mac で実行可)
+    │   └── test_weeder_node.py             # VM 統合テスト (rclpy 必要)
     ├── launch/sim_launch.py                # 一括起動
     ├── urdf/robot_description.urdf.xacro   # ロボットモデル
     └── worlds/obstacles.world              # Gazebo World
@@ -96,6 +101,23 @@ ros2 launch grass_chopper sim_launch.py
 
 ## テスト方針
 
-- Python ノードのロジック (障害物回避アルゴリズム等) はユニットテスト対象
+### Humble Object パターン
+
+- 回避アルゴリズムの純粋計算ロジックは `obstacle_avoidance.py` に集約 (ROS 2 非依存)
+- `weeder_node.py` は ROS 2 接続のみ担当する薄いアダプター
+- 新しいロジックは必ず `obstacle_avoidance.py` に追加すること
+
+### テスト実行
+
+```bash
+# Mac ホストで純粋ロジックテスト (rclpy 不要, 39テスト)
+make test-pure
+
+# 構文チェック
+make check-syntax
+```
+
+- `test_obstacle_avoidance.py`: Mac ホストで即時実行可能な純粋ロジックテスト
+- `test_weeder_node.py`: VM 統合テスト (rclpy 必要、VM 環境構築後に確認)
 - URDF / World / cloud-init は構文チェック + 実環境での動作確認
 - launch ファイルは統合テスト (シミュレーション起動確認)

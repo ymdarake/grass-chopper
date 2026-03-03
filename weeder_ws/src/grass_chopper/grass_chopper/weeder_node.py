@@ -4,6 +4,9 @@
 ============================================================================
 LiDARセンサーで障害物を検知し、状態遷移マシンで回避行動を制御するROS 2ノード。
 
+計算ロジックは obstacle_avoidance モジュールに委譲し、
+このノードは ROS 2 接続 (パブリッシャー/サブスクライバー/パラメータ) のみ担当する。
+
 状態遷移マシン:
   FORWARD     → 前方クリア: 直進
   AVOID_LEFT  → 左が空いている: 左回転回避
@@ -18,7 +21,6 @@ LiDARセンサーで障害物を検知し、状態遷移マシンで回避行動
 """
 
 import math
-from enum import Enum, auto
 
 import rclpy
 from rclpy.node import Node
@@ -27,14 +29,16 @@ from sensor_msgs.msg import LaserScan
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType, SetParametersResult
 
-
-class RobotState(Enum):
-    """ロボットの行動状態"""
-    FORWARD = auto()      # 前方クリア: 直進
-    AVOID_LEFT = auto()   # 左が空いている: 左回転回避
-    AVOID_RIGHT = auto()  # 右が空いている: 右回転回避
-    WALL_FOLLOW = auto()  # 壁沿い走行
-    U_TURN = auto()       # 行き止まり: Uターン
+from grass_chopper.obstacle_avoidance import (
+    RobotState,
+    AvoidanceParams,
+    ScanConfig,
+    analyze_zones,
+    update_state,
+    compute_twist,
+    deg_to_index,
+    get_zone_stats,
+)
 
 
 class WeederNode(Node):
@@ -174,21 +178,25 @@ class WeederNode(Node):
                 self.u_turn_speed = param.value
         return SetParametersResult(successful=True)
 
-    def _deg_to_index(self, deg: float, angle_min: float, angle_increment: float) -> int:
-        """
-        角度[度]を ranges 配列のインデックスに変換
+    def _get_params(self) -> AvoidanceParams:
+        """現在の ROS 2 パラメータを AvoidanceParams に集約"""
+        return AvoidanceParams(
+            safe_distance=self.safe_distance,
+            forward_speed=self.forward_speed,
+            turn_speed=self.turn_speed,
+            wall_target_distance=self.wall_target_distance,
+            wall_follow_kp=self.wall_follow_kp,
+            wall_follow_kd=self.wall_follow_kd,
+            wall_follow_speed=self.wall_follow_speed,
+            angular_z_limit=self.angular_z_limit,
+            u_turn_speed=self.u_turn_speed,
+        )
 
-        Args:
-            deg: 角度 [度] (-180 ~ 180)
-            angle_min: LaserScan の angle_min [rad]
-            angle_increment: LaserScan の angle_increment [rad]
-        Returns:
-            ranges 配列のインデックス
-        """
-        if angle_increment == 0.0:
-            return 0
-        rad = math.radians(deg)
-        return round((rad - angle_min) / angle_increment)
+    # --- 後方互換メソッド (既存テスト test_weeder_node.py が使用) ---
+
+    def _deg_to_index(self, deg: float, angle_min: float, angle_increment: float) -> int:
+        """角度[度]を ranges 配列のインデックスに変換 (委譲)"""
+        return deg_to_index(deg, angle_min, angle_increment)
 
     def get_zone_stats(
         self,
@@ -200,161 +208,39 @@ class WeederNode(Node):
         angle_min: float = -math.pi,
         angle_increment: float = 0.0,
     ) -> tuple:
-        """
-        指定角度範囲の最小距離と平均距離を返す
-
-        Args:
-            ranges: LaserScan.ranges 配列
-            start_deg: ゾーン開始角度 [度] (-180 ~ 180)
-            end_deg: ゾーン終了角度 [度]
-            range_min: 有効最小距離
-            range_max: 有効最大距離
-            angle_min: LaserScan の angle_min [rad]
-            angle_increment: LaserScan の angle_increment [rad] (0の場合は自動計算)
-        Returns:
-            (min_distance, avg_distance) のタプル。有効データなしの場合は (inf, inf)
-        """
-        num_samples = len(ranges)
-        if num_samples == 0:
-            return (float('inf'), float('inf'))
-
-        # angle_increment が指定されていない場合は自動計算（後方互換性）
-        if angle_increment == 0.0:
-            angle_increment = (2 * math.pi) / num_samples
-
-        idx1 = self._deg_to_index(start_deg, angle_min, angle_increment)
-        idx2 = self._deg_to_index(end_deg, angle_min, angle_increment)
-        start_idx = max(0, min(idx1, idx2))
-        end_idx = min(num_samples - 1, max(idx1, idx2))
-
-        zone_ranges = ranges[start_idx:end_idx + 1]
-        valid = [
-            r for r in zone_ranges
-            if not math.isinf(r) and not math.isnan(r)
-            and r > range_min and r < range_max
-        ]
-
-        if not valid:
-            return (float('inf'), float('inf'))
-
-        return (min(valid), sum(valid) / len(valid))
+        """指定角度範囲の最小距離と平均距離を返す (委譲)"""
+        return get_zone_stats(
+            ranges, start_deg, end_deg, range_min, range_max,
+            angle_min, angle_increment,
+        )
 
     def _analyze_zones(self, msg: LaserScan) -> dict:
-        """
-        LiDAR データをゾーンごとに解析する
-
-        Returns:
-            ゾーンごとの (min, avg) 辞書
-        """
-        r_min = msg.range_min
-        r_max = msg.range_max
-        ranges = msg.ranges
-        a_min = msg.angle_min
-        a_inc = msg.angle_increment
-
-        front_min, front_avg = self.get_zone_stats(
-            ranges, -30.0, 30.0, r_min, r_max, a_min, a_inc)
-        left_min, left_avg = self.get_zone_stats(
-            ranges, 60.0, 120.0, r_min, r_max, a_min, a_inc)
-        right_min, right_avg = self.get_zone_stats(
-            ranges, -120.0, -60.0, r_min, r_max, a_min, a_inc)
-
-        return {
-            'front_min': front_min, 'front_avg': front_avg,
-            'left_min': left_min, 'left_avg': left_avg,
-            'right_min': right_min, 'right_avg': right_avg,
-        }
+        """LiDAR データをゾーンごとに解析する (LaserScan → ScanConfig 変換)"""
+        scan_config = ScanConfig(
+            angle_min=msg.angle_min,
+            angle_increment=msg.angle_increment,
+            range_min=msg.range_min,
+            range_max=msg.range_max,
+        )
+        return analyze_zones(list(msg.ranges), scan_config)
 
     def _update_state(self, zones: dict):
-        """
-        ゾーン情報に基づいて状態を遷移させる
-
-        優先度: U_TURN > AVOID_LEFT/RIGHT > WALL_FOLLOW > FORWARD
-        """
-        front_min = zones['front_min']
-        left_min = zones['left_min']
-        right_min = zones['right_min']
-        left_avg = zones['left_avg']
-        right_avg = zones['right_avg']
-
-        # 行き止まり: 三方が塞がれている → U_TURN
-        if (front_min < self.safe_distance
-                and left_min < self.safe_distance
-                and right_min < self.safe_distance):
-            self.state = RobotState.U_TURN
-            return
-
-        # 前方に障害物 → 左右を比較して回避方向を選択
-        if front_min < self.safe_distance:
-            if left_avg > right_avg:
-                self.state = RobotState.AVOID_LEFT
-            else:
-                self.state = RobotState.AVOID_RIGHT
-            return
-
-        # 回避中に前方がクリアになった → FORWARD に復帰
-        if self.state in (RobotState.AVOID_LEFT, RobotState.AVOID_RIGHT,
-                          RobotState.U_TURN):
-            if front_min > self.safe_distance * 1.2:
-                self.state = RobotState.FORWARD
-                return
-
-        # WALL_FOLLOW 状態での遷移判定
-        if self.state == RobotState.WALL_FOLLOW:
-            # 右側に壁がなくなった → FORWARD に復帰
-            if right_min > self.wall_target_distance * 2.0:
-                self.state = RobotState.FORWARD
-                self.prev_wall_error = 0.0
-                return
-            # 壁沿い継続
-            return
-
-        # FORWARD 状態で右側に壁が近い → WALL_FOLLOW に遷移
-        if self.state == RobotState.FORWARD:
-            if right_min < self.wall_target_distance * 1.5 and front_min >= self.safe_distance:
-                self.state = RobotState.WALL_FOLLOW
-                self.prev_wall_error = 0.0
-                return
-
-    def _compute_wall_follow_twist(self, right_min: float) -> Twist:
-        """
-        PD制御で壁沿い走行の Twist を生成
-
-        error > 0: 壁に近すぎる → angular.z > 0 (左に曲がって離れる)
-        error < 0: 壁から遠すぎる → angular.z < 0 (右に曲がって近づく)
-        """
-        error = self.wall_target_distance - right_min
-        p_term = self.wall_follow_kp * error
-        d_term = self.wall_follow_kd * (error - self.prev_wall_error)
-        self.prev_wall_error = error
-
-        twist = Twist()
-        twist.linear.x = self.wall_follow_speed
-        twist.angular.z = max(-self.angular_z_limit,
-                              min(self.angular_z_limit, p_term + d_term))
-        return twist
+        """ゾーン情報に基づいて状態を遷移させる (返り値で self.state 更新)"""
+        params = self._get_params()
+        new_state, wall_error_reset = update_state(self.state, zones, params)
+        self.state = new_state
+        if wall_error_reset:
+            self.prev_wall_error = 0.0
 
     def _compute_twist(self, zones: dict) -> Twist:
-        """
-        現在の状態に応じた Twist メッセージを生成する
-        """
+        """現在の状態に応じた Twist メッセージを生成する (TwistCommand → Twist 変換)"""
+        params = self._get_params()
+        cmd, new_error = compute_twist(self.state, zones, self.prev_wall_error, params)
+        self.prev_wall_error = new_error
+
         twist = Twist()
-
-        if self.state == RobotState.FORWARD:
-            twist.linear.x = self.forward_speed
-            twist.angular.z = 0.0
-        elif self.state == RobotState.AVOID_LEFT:
-            twist.linear.x = 0.0
-            twist.angular.z = self.turn_speed
-        elif self.state == RobotState.AVOID_RIGHT:
-            twist.linear.x = 0.0
-            twist.angular.z = -self.turn_speed
-        elif self.state == RobotState.U_TURN:
-            twist.linear.x = 0.0
-            twist.angular.z = self.u_turn_speed
-        elif self.state == RobotState.WALL_FOLLOW:
-            twist = self._compute_wall_follow_twist(zones['right_min'])
-
+        twist.linear.x = cmd.linear_x
+        twist.angular.z = cmd.angular_z
         return twist
 
     def scan_callback(self, msg: LaserScan):
