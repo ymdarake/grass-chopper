@@ -21,6 +21,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -129,16 +130,17 @@ def _launch_setup(context, *args, **kwargs):
     )
 
     # ===================================================================
-    # 5. 障害物回避ノード
+    # 5. 障害物回避ノード (Nav2 モードでは停止)
     # ===================================================================
     # LiDARデータを使って障害物を回避しながら前進するノード
-    # config/weeder_params.yaml からパラメータを読み込む
+    # nav2_mode=true 時は Nav2 が cmd_vel を制御するため起動しない
     weeder_params_file = os.path.join(pkg_share, 'config', 'weeder_params.yaml')
     weeder_node = Node(
         package='grass_chopper',
         executable='weeder_node',
         output='screen',
-        parameters=[weeder_params_file, {'use_sim_time': True}]
+        parameters=[weeder_params_file, {'use_sim_time': True}],
+        condition=UnlessCondition(LaunchConfiguration('nav2_mode')),
     )
 
     # ===================================================================
@@ -183,5 +185,7 @@ def generate_launch_description():
                               description='ロボットの初期X座標 [m]'),
         DeclareLaunchArgument('y', default_value='0.0',
                               description='ロボットの初期Y座標 [m]'),
+        DeclareLaunchArgument('nav2_mode', default_value='false',
+                              description='Nav2 使用時は true (weeder_node を停止)'),
         OpaqueFunction(function=_launch_setup),
     ])

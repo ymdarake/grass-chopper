@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure vm-build vm-sim vm-stop vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure vm-build vm-sim vm-sim-nav2 vm-nav2 vm-nav2-test vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -16,6 +16,18 @@ vm-build:
 ## VM 内でシミュレーション起動
 vm-sim:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py'
+
+## Nav2 モードでシミュレーション起動 (weeder_node なし、slam_test.world)
+vm-sim-nav2:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=slam_test.world x:=0.0 y:=-4.0 nav2_mode:=true'
+
+## Nav2 スタック起動 (vm-sim-nav2 が起動済みの状態で実行)
+vm-nav2:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 launch grass_chopper nav2_launch.py'
+
+## Nav2 NavigateToPose テスト (ゴール: (0.0, 4.0) へ移動)
+vm-nav2-test:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {header: {frame_id: map}, pose: {position: {x: 0.0, y: 4.0, z: 0.0}, orientation: {w: 1.0}}}}"'
 
 ## VM 停止
 vm-stop:

@@ -1,0 +1,24 @@
+# ============================================================================
+# twist_mux パラメータ設定 (Phase 4a)
+# ============================================================================
+# 複数の cmd_vel ソースを優先度で切り替える。
+# priority の値が大きいほど優先度が高い。
+#
+# 用途:
+#   - navigation (Nav2 controller): 自律ナビゲーション
+#   - teleop (手動操作): デバッグ・緊急時の手動制御
+# ============================================================================
+
+twist_mux:
+  ros__parameters:
+    use_sim_time: true
+    use_stamped: false
+    topics:
+      navigation:
+        topic: cmd_vel_nav         # Nav2 Controller Server の出力
+        timeout: 0.5
+        priority: 10
+      teleop:
+        topic: cmd_vel_teleop      # 手動操作 (将来用)
+        timeout: 0.5
+        priority: 20               # 手動が最優先

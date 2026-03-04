@@ -37,8 +37,11 @@ grass-chopper/
     │   └── test_weeder_node.py             # VM 統合テスト (rclpy 必要)
     ├── config/
     │   ├── weeder_params.yaml              # 障害物回避パラメータ
-    │   └── mapper_params_online_async.yaml # SLAM パラメータ (Phase 3)
+    │   ├── mapper_params_online_async.yaml # SLAM パラメータ (Phase 3)
+    │   ├── nav2_params.yaml                # Nav2 パラメータ (Phase 4a)
+    │   └── twist_mux_params.yaml           # twist_mux 優先度設定 (Phase 4a)
     ├── launch/sim_launch.py                # 一括起動 (Gazebo + SLAM + weeder_node)
+    ├── launch/nav2_launch.py               # Nav2 スタック起動 (Phase 4a)
     ├── urdf/robot_description.urdf.xacro   # ロボットモデル
     └── worlds/
         ├── obstacles.world                 # 障害物回避テスト環境
@@ -153,6 +156,15 @@ make vm-build
 
 # VM 内でシミュレーション起動 (バックグラウンド)
 make vm-sim
+
+# Nav2 モードでシミュレーション起動 (weeder_node なし)
+make vm-sim-nav2
+
+# Nav2 スタック起動 (vm-sim-nav2 が起動済みの状態で実行)
+make vm-nav2
+
+# NavigateToPose テスト
+make vm-nav2-test
 ```
 
 ## VM + ブラウザ ワークフロー
