@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-nav2 vm-sim-coverage vm-nav2 vm-nav2-test vm-coverage vm-kill vm-stop vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-nav2 vm-sim-coverage vm-sim-obstacles vm-nav2 vm-nav2-test vm-coverage vm-coverage-obstacles vm-kill vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -6,7 +6,7 @@ check-syntax:
 
 ## 純粋ロジックテスト (Mac ホストで実行可能, rclpy 不要)
 test-pure:
-	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py -v
+	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py -v
 
 ## カバレッジプランナーテスト (Mac ホストで実行可能)
 test-coverage:
@@ -33,9 +33,17 @@ vm-nav2:
 vm-sim-coverage:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=coverage_test.world x:=-3.5 y:=-3.5 nav2_mode:=true'
 
+## 障害物ありカバレッジテスト用シミュレーション起動 (coverage_obstacles.world + Nav2 モード)
+vm-sim-obstacles:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=coverage_obstacles.world x:=-3.5 y:=-3.5 nav2_mode:=true'
+
 ## カバレッジ走行実行 (vm-sim-coverage + vm-nav2 が起動済みの状態で実行)
 vm-coverage:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 run grass_chopper coverage_commander_node --ros-args --params-file ~/weeder_build/install/grass_chopper/share/grass_chopper/config/coverage_params.yaml -p use_sim_time:=true'
+
+## 障害物ありカバレッジ走行実行 (vm-sim-obstacles + vm-nav2 が起動済みの状態で実行)
+vm-coverage-obstacles:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 run grass_chopper coverage_commander_node --ros-args --params-file ~/weeder_build/install/grass_chopper/share/grass_chopper/config/coverage_obstacles_params.yaml -p use_sim_time:=true'
 
 ## Nav2 NavigateToPose テスト (ゴール: (0.0, 4.0) へ移動)
 vm-nav2-test:
@@ -43,7 +51,7 @@ vm-nav2-test:
 
 ## VM 内の ROS 2 / Gazebo 残留プロセスを一括停止
 vm-kill:
-	multipass exec ros2-vm -- bash -c 'killall -9 coverage_commander_node parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
+	multipass exec ros2-vm -- bash -c 'killall -9 coverage_tracker_node coverage_commander_node parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
 
 ## VM 停止
 vm-stop:

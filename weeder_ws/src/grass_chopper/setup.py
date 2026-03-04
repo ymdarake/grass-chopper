@@ -55,6 +55,7 @@ setup(
         'console_scripts': [
             'weeder_node = grass_chopper.weeder_node:main',
             'coverage_commander_node = grass_chopper.coverage_commander_node:main',
+            'coverage_tracker_node = grass_chopper.coverage_tracker_node:main',
         ],
     },
 )

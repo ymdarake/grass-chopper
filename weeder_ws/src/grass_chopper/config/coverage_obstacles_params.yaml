@@ -1,0 +1,32 @@
+# ============================================================================
+# 障害物ありカバレッジ走行パラメータ設定 (Phase 4c)
+# ============================================================================
+# coverage_obstacles.world 用のパラメータ。
+# 障害物を考慮した Boustrophedon パターン走行を行う。
+#
+# 障害物の map 座標 (ロボット初期位置 (-3.5, -3.5) が map 原点):
+#   obstacle_1: world (1.5, 0.5) → map (5.0, 4.0)
+#   obstacle_2: world (-1.0, -1.5) → map (2.5, 2.0)
+# ============================================================================
+
+coverage_commander_node:
+  ros__parameters:
+    use_sim_time: true
+    # カバレッジ対象領域 [min_x, min_y, max_x, max_y] (map 座標系)
+    region: [0.5, 0.5, 6.5, 6.5]
+    # 作業幅 [m] (統合テスト用に広め)
+    swath_width: 1.0
+    # 境界マージン [m]
+    margin: 0.3
+    # 走行方向 [rad]
+    direction: 0.0
+    # --- 障害物設定 ---
+    num_obstacles: 2
+    # obstacle_1: map (5.0, 4.0) 中心の 1m×1m → 頂点座標
+    obstacle_0: [4.5, 3.5, 5.5, 3.5, 5.5, 4.5, 4.5, 4.5]
+    # obstacle_2: map (2.5, 2.0) 中心の 1m×1m → 頂点座標
+    obstacle_1: [2.0, 1.5, 3.0, 1.5, 3.0, 2.5, 2.0, 2.5]
+    # --- 再走行 (remow) 設定 ---
+    enable_remow: false
+    remow_min_area: 0.5
+    remow_max_iterations: 1

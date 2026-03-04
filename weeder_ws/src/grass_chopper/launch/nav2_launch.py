@@ -26,6 +26,9 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
 
@@ -136,7 +139,25 @@ def generate_launch_description():
         parameters=[configured_params],
     )
 
+    # ===================================================================
+    # 8. Coverage Tracker (オプション)
+    # ===================================================================
+    # coverage_tracking:=true で有効化
+    coverage_tracking_arg = DeclareLaunchArgument(
+        'coverage_tracking', default_value='false',
+        description='カバレッジ追跡ノードを起動するか')
+
+    coverage_tracker = Node(
+        package='grass_chopper',
+        executable='coverage_tracker_node',
+        output='screen',
+        parameters=[{'use_sim_time': True, 'tool_radius': 0.5,
+                      'update_frequency': 5.0}],
+        condition=IfCondition(LaunchConfiguration('coverage_tracking')),
+    )
+
     return LaunchDescription([
+        coverage_tracking_arg,
         twist_mux,
         controller_server,
         planner_server,
@@ -144,4 +165,5 @@ def generate_launch_description():
         bt_navigator,
         waypoint_follower,
         lifecycle_manager,
+        coverage_tracker,
     ])

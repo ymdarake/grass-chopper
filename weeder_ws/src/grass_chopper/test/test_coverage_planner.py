@@ -268,3 +268,112 @@ class TestCoverageRatio:
         waypoints = generate_boustrophedon_waypoints(square_6m, default_params)
         ratio = estimate_coverage_ratio(waypoints, square_6m, default_params.swath_width)
         assert 0.0 <= ratio <= 1.0
+
+
+# ============================================================================
+# TestBoustrophedonWithObstacles
+# ============================================================================
+
+class TestBoustrophedonWithObstacles:
+    """障害物ありの generate_boustrophedon_waypoints テスト"""
+
+    def test_no_obstacles_same_as_before(self, square_6m, default_params):
+        """obstacles=None は従来と同じ結果"""
+        wp_without = generate_boustrophedon_waypoints(square_6m, default_params)
+        wp_with_none = generate_boustrophedon_waypoints(
+            square_6m, default_params, obstacles=None)
+        assert len(wp_without) == len(wp_with_none)
+
+    def test_empty_obstacles_same_as_none(self, square_6m, default_params):
+        """obstacles=[] は None と同じ"""
+        wp_none = generate_boustrophedon_waypoints(
+            square_6m, default_params, obstacles=None)
+        wp_empty = generate_boustrophedon_waypoints(
+            square_6m, default_params, obstacles=[])
+        assert len(wp_none) == len(wp_empty)
+
+    def test_obstacle_changes_coverage(self):
+        """中央に大きな障害物 → 推定カバレッジが変わる"""
+        field = make_square(6.0)
+        obstacle = make_square(3.0)  # 中央に 3m×3m の障害物
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        wp_no_obs = generate_boustrophedon_waypoints(field, params)
+        wp_with_obs = generate_boustrophedon_waypoints(
+            field, params, obstacles=[obstacle])
+
+        # 障害物ありでもウェイポイントは生成される
+        assert len(wp_with_obs) > 0
+        # 障害物なしとウェイポイント構成が変わる (数か位置)
+        assert wp_with_obs != wp_no_obs
+
+    def test_obstacle_splits_into_multi_polygon(self):
+        """中央障害物が MultiPolygon に分割する場合もウェイポイント生成"""
+        field = make_square(6.0)
+        # 横長の障害物でフィールドを上下に分割
+        obstacle = Polygon([(-4, -0.3), (4, -0.3), (4, 0.3), (-4, 0.3)])
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        waypoints = generate_boustrophedon_waypoints(
+            field, params, obstacles=[obstacle])
+
+        assert len(waypoints) > 0
+        # 上半分と下半分の両方にウェイポイントがある
+        y_values = [wp.y for wp in waypoints]
+        assert any(y > 0.5 for y in y_values), "上半分にウェイポイントがない"
+        assert any(y < -0.5 for y in y_values), "下半分にウェイポイントがない"
+
+    def test_obstacle_covering_whole_field_returns_empty(self):
+        """障害物がフィールド全体を覆う → 空リスト"""
+        field = make_square(4.0)
+        obstacle = make_square(6.0)  # フィールドより大きい障害物
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        waypoints = generate_boustrophedon_waypoints(
+            field, params, obstacles=[obstacle])
+
+        assert waypoints == []
+
+    def test_multiple_obstacles(self):
+        """複数障害物でもウェイポイント生成"""
+        field = make_square(8.0)
+        obs1 = Polygon([(-3, -3), (-1, -3), (-1, -1), (-3, -1)])  # 左下
+        obs2 = Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])          # 右上
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        waypoints = generate_boustrophedon_waypoints(
+            field, params, obstacles=[obs1, obs2])
+
+        assert len(waypoints) > 0
+
+    def test_waypoints_avoid_obstacles(self):
+        """ウェイポイントが障害物内に生成されない"""
+        field = make_square(6.0)
+        obstacle = make_square(2.0)  # 中央に 2m×2m の障害物
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        waypoints = generate_boustrophedon_waypoints(
+            field, params, obstacles=[obstacle])
+
+        from shapely.geometry import Point
+        for wp in waypoints:
+            assert not obstacle.contains(Point(wp.x, wp.y)), \
+                f"Waypoint ({wp.x:.2f}, {wp.y:.2f}) is inside obstacle"
+
+    def test_l_shaped_field(self):
+        """L字型フィールド (凹ポリゴン) でウェイポイント生成"""
+        # L字型: 左下 4x4 から右上 2x2 を除去
+        l_shape = Polygon([
+            (-2, -2), (2, -2), (2, 0), (0, 0), (0, 2), (-2, 2)
+        ])
+        params = CoverageParams(swath_width=0.5, margin=0.0)
+
+        waypoints = generate_boustrophedon_waypoints(l_shape, params)
+
+        assert len(waypoints) > 0
+        # 全ウェイポイントが L 字内部にある
+        from shapely.geometry import Point
+        for wp in waypoints:
+            assert l_shape.contains(Point(wp.x, wp.y)) or \
+                l_shape.boundary.distance(Point(wp.x, wp.y)) < 0.01, \
+                f"Waypoint ({wp.x:.2f}, {wp.y:.2f}) is outside L-shape"

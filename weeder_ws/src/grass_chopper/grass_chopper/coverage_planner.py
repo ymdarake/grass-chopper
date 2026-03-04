@@ -17,7 +17,8 @@ import math
 from dataclasses import dataclass
 
 from shapely.affinity import rotate
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.ops import unary_union
 
 
 # ============================================================================
@@ -83,27 +84,50 @@ def compute_yaw(p1: Waypoint, p2: Waypoint) -> float:
     return math.atan2(dy, dx)
 
 
-def generate_boustrophedon_waypoints(
-    polygon: Polygon,
+def _extract_segments(intersection) -> list:
+    """
+    スキャンラインとポリゴンの交差結果から (x_start, x_end) セグメントを抽出
+
+    LineString → 1セグメント、MultiLineString → 複数セグメント
+    短すぎるセグメント (< 1e-3) はフィルタする。
+    結果は x_start の昇順でソート済み。
+    """
+    from shapely.geometry import MultiLineString as MultiLS
+
+    geoms = []
+    if isinstance(intersection, LineString):
+        geoms = [intersection]
+    elif isinstance(intersection, MultiLS):
+        geoms = list(intersection.geoms)
+    elif hasattr(intersection, 'geoms'):
+        # GeometryCollection 等
+        geoms = [g for g in intersection.geoms if isinstance(g, LineString)]
+    else:
+        # Point など → スキップ
+        return []
+
+    segments = []
+    for geom in geoms:
+        if geom.is_empty:
+            continue
+        b = geom.bounds
+        x_start, x_end = b[0], b[2]
+        if x_end - x_start >= 1e-3:
+            segments.append((x_start, x_end))
+
+    segments.sort(key=lambda s: s[0])
+    return segments
+
+
+def _generate_single_polygon_waypoints(
+    work_area: Polygon,
     params: CoverageParams,
 ) -> list:
     """
-    Boustrophedon パターンでジグザグウェイポイントを生成する
+    単一ポリゴンに対する Boustrophedon ウェイポイント生成 (内部ヘルパー)
 
-    ポリゴンを margin 分縮小した後、swath_width 間隔で平行なストライプを引き、
-    各ストライプとポリゴンの交差点をウェイポイントとして返す。
-
-    Args:
-        polygon: カバレッジ対象ポリゴン
-        params: カバレッジパラメータ
-    Returns:
-        Waypoint のリスト (ジグザグ順)
+    マージン縮小済みのポリゴンに対して実行する。
     """
-    if polygon.is_empty:
-        return []
-
-    # 1. マージン分縮小
-    work_area = shrink_polygon(polygon, params.margin)
     if work_area.is_empty:
         return []
 
@@ -111,53 +135,45 @@ def generate_boustrophedon_waypoints(
     centroid = work_area.centroid
     cx, cy = centroid.x, centroid.y
 
-    # 2. direction が 0 でない場合、ポリゴンを逆回転して軸をそろえる
+    # direction が 0 でない場合、ポリゴンを逆回転して軸をそろえる
+    rotated_area = work_area
     if params.direction != 0.0:
-        work_area = rotate(work_area, -math.degrees(params.direction), origin='centroid')
+        rotated_area = rotate(work_area, -math.degrees(params.direction),
+                              origin='centroid')
 
-    # 3. バウンディングボックスを取得
-    minx, miny, maxx, maxy = work_area.bounds
+    # バウンディングボックスを取得
+    minx, miny, maxx, maxy = rotated_area.bounds
 
-    # 4. y 方向にストライプを生成 (水平方向のスキャンライン)
+    # y 方向にストライプを生成 (水平方向のスキャンライン)
     waypoints_raw = []
     y = miny + params.swath_width / 2
     row_index = 0
 
     while y <= maxy - params.swath_width / 2 + 1e-9:
-        # スキャンラインとポリゴンの交差を計算
         scan_line = LineString([(minx - 1, y), (maxx + 1, y)])
-        intersection = work_area.intersection(scan_line)
+        intersection = rotated_area.intersection(scan_line)
 
         if intersection.is_empty:
             y += params.swath_width
             row_index += 1
             continue
 
-        # 交差結果から x 座標の範囲を取得 (bounds で安全に)
-        bounds = intersection.bounds
-        if not bounds:
+        # 交差結果からセグメントを抽出 (MultiLineString 対応)
+        segments = _extract_segments(intersection)
+
+        if not segments:
             y += params.swath_width
             row_index += 1
             continue
-
-        minx_int, _, maxx_int, _ = bounds
-
-        # 点のみなど、交差幅が短すぎる場合はスキップ
-        if maxx_int - minx_int < 1e-3:
-            y += params.swath_width
-            row_index += 1
-            continue
-
-        x_start = minx_int
-        x_end = maxx_int
 
         # ジグザグ: 偶数行は左→右、奇数行は右→左
-        if row_index % 2 == 0:
+        if row_index % 2 == 1:
+            segments.reverse()
+            segments = [(x_end, x_start) for x_start, x_end in segments]
+
+        for x_start, x_end in segments:
             waypoints_raw.append((x_start, y))
             waypoints_raw.append((x_end, y))
-        else:
-            waypoints_raw.append((x_end, y))
-            waypoints_raw.append((x_start, y))
 
         y += params.swath_width
         row_index += 1
@@ -165,7 +181,7 @@ def generate_boustrophedon_waypoints(
     if not waypoints_raw:
         return []
 
-    # 5. direction が 0 でない場合、座標を元に戻す (正回転)
+    # direction が 0 でない場合、座標を元に戻す (正回転)
     if params.direction != 0.0:
         cos_d = math.cos(params.direction)
         sin_d = math.sin(params.direction)
@@ -179,7 +195,11 @@ def generate_boustrophedon_waypoints(
             rotated.append((rx, ry))
         waypoints_raw = rotated
 
-    # 6. yaw を計算して Waypoint リストに変換
+    return waypoints_raw
+
+
+def _raw_to_waypoints(waypoints_raw: list) -> list:
+    """(x, y) タプルリストを Waypoint リストに変換 (yaw 計算付き)"""
     waypoints = []
     for i, (x, y) in enumerate(waypoints_raw):
         if i < len(waypoints_raw) - 1:
@@ -190,8 +210,82 @@ def generate_boustrophedon_waypoints(
         else:
             yaw = 0.0
         waypoints.append(Waypoint(x=x, y=y, yaw=yaw))
-
     return waypoints
+
+
+def generate_boustrophedon_waypoints(
+    polygon: Polygon,
+    params: CoverageParams,
+    obstacles: list | None = None,
+) -> list:
+    """
+    Boustrophedon パターンでジグザグウェイポイントを生成する
+
+    ポリゴンを margin 分縮小した後、swath_width 間隔で平行なストライプを引き、
+    各ストライプとポリゴンの交差点をウェイポイントとして返す。
+
+    obstacles が指定された場合、polygon.difference(union(obstacles)) で
+    走行可能領域を計算し、MultiPolygon なら各サブポリゴンを貪欲法で
+    近い順に走行する。
+
+    Args:
+        polygon: カバレッジ対象ポリゴン
+        params: カバレッジパラメータ
+        obstacles: 障害物ポリゴンのリスト (None=障害物なし)
+    Returns:
+        Waypoint のリスト (ジグザグ順)
+    """
+    if polygon.is_empty:
+        return []
+
+    # 1. マージン分縮小
+    work_area = shrink_polygon(polygon, params.margin)
+    if work_area.is_empty:
+        return []
+
+    # 2. 障害物があれば差分を計算
+    if obstacles:
+        obstacle_union = unary_union(obstacles)
+        work_area = work_area.difference(obstacle_union)
+        if work_area.is_empty:
+            return []
+
+    # 3. MultiPolygon の場合はサブポリゴンに分解して貪欲法で走行順序決定
+    if isinstance(work_area, MultiPolygon):
+        sub_polygons = list(work_area.geoms)
+    else:
+        sub_polygons = [work_area]
+
+    # 面積が小さすぎるサブポリゴンをフィルタ
+    sub_polygons = [p for p in sub_polygons
+                    if not p.is_empty and p.area > params.swath_width ** 2]
+
+    if not sub_polygons:
+        return []
+
+    # 貪欲法: 現在位置から最も近いサブポリゴンを次に選択
+    all_raw = []
+    current_pos = (0.0, 0.0)  # 初期位置 (ロボットの出発点想定)
+
+    remaining = list(sub_polygons)
+    while remaining:
+        # 各サブポリゴンの重心距離で最近選択
+        nearest_idx = min(
+            range(len(remaining)),
+            key=lambda i: (remaining[i].centroid.x - current_pos[0]) ** 2 +
+                          (remaining[i].centroid.y - current_pos[1]) ** 2
+        )
+        sub = remaining.pop(nearest_idx)
+
+        raw = _generate_single_polygon_waypoints(sub, params)
+        if raw:
+            all_raw.extend(raw)
+            current_pos = raw[-1]  # 最後のウェイポイントを現在位置に更新
+
+    if not all_raw:
+        return []
+
+    return _raw_to_waypoints(all_raw)
 
 
 def estimate_coverage_ratio(

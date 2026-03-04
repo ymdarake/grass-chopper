@@ -1,0 +1,219 @@
+<?xml version="1.0" ?>
+<!--
+  ============================================================================
+  Gazebo Harmonic ワールドファイル: 障害物ありカバレッジ走行テスト環境
+  ============================================================================
+  8m x 8m の正方形フィールド + 障害物 2 個。
+  カバレッジ走行の障害物回避テストに使用する。
+
+  構成:
+    - 外壁 4 枚 (8m x 8m の正方形)
+    - 障害物 2 個 (1m x 1m の箱型、高さ 0.3m)
+      - obstacle_1: (1.5, 0.5) — フィールド右上寄り
+      - obstacle_2: (-1.0, -1.5) — フィールド左下寄り
+    - 障害物間隔: ロボット半径 (0.15m) × 2.5 以上を確保
+    - ロボット初期位置: (-3.5, -3.5, 0) — 南西コーナー付近
+
+  障害物の map 座標 (ロボット初期位置が map 原点):
+    - obstacle_1: map (5.0, 4.0) = world (1.5, 0.5)
+    - obstacle_2: map (2.5, 2.0) = world (-1.0, -1.5)
+  ============================================================================
+-->
+<sdf version="1.8">
+  <world name="coverage_obstacles_world">
+
+    <!-- =================================================================== -->
+    <!-- 必須プラグイン                                                      -->
+    <!-- =================================================================== -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- =================================================================== -->
+    <!-- 太陽光                                                              -->
+    <!-- =================================================================== -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- =================================================================== -->
+    <!-- 地面 (緑色の芝生)                                                   -->
+    <!-- =================================================================== -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.2 0.6 0.2 1</ambient>
+            <diffuse>0.2 0.6 0.2 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 外壁 (8m x 8m の正方形)                                            -->
+    <!-- =================================================================== -->
+    <!-- 壁の厚さ: 0.2m, 高さ: 1.0m -->
+
+    <!-- 北壁 (Y = +4) -->
+    <model name="wall_north">
+      <pose>0 4 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 南壁 (Y = -4) -->
+    <model name="wall_south">
+      <pose>0 -4 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 東壁 (X = +4) -->
+    <model name="wall_east">
+      <pose>4 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 西壁 (X = -4) -->
+    <model name="wall_west">
+      <pose>-4 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 1: 1m x 1m 箱型 (world: 1.5, 0.5)                          -->
+    <!-- =================================================================== -->
+    <model name="obstacle_1">
+      <pose>1.5 0.5 0.15 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.0 1.0 0.3</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.3</size></box></geometry>
+          <material>
+            <ambient>0.6 0.3 0.1 1</ambient>
+            <diffuse>0.6 0.3 0.1 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>10.0</mass>
+          <inertia>
+            <ixx>0.83</ixx><iyy>0.83</iyy><izz>1.67</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+
+    <!-- =================================================================== -->
+    <!-- 障害物 2: 1m x 1m 箱型 (world: -1.0, -1.5)                        -->
+    <!-- =================================================================== -->
+    <model name="obstacle_2">
+      <pose>-1.0 -1.5 0.15 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.0 1.0 0.3</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.3</size></box></geometry>
+          <material>
+            <ambient>0.6 0.3 0.1 1</ambient>
+            <diffuse>0.6 0.3 0.1 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>10.0</mass>
+          <inertia>
+            <ixx>0.83</ixx><iyy>0.83</iyy><izz>1.67</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+
+  </world>
+</sdf>
