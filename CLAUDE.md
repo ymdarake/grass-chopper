@@ -63,6 +63,15 @@ ROS → GZ (指令):  /cmd_vel
 GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states, /tf
 ```
 
+### TF チェーン
+
+```
+map ─(slam_toolbox)─→ odom ─(DiffDrive via gz_bridge)─→ base_link ─(robot_state_publisher)─→ lidar_link
+```
+
+各 TF 発行者が明確に分離されており、競合リスクは低い。
+AMCL と slam_toolbox は共に map→odom を発行するため **同時起動禁止**。
+
 ## コーディング規約
 
 ### Python (ROS 2 ノード)
@@ -90,6 +99,17 @@ GZ → ROS (データ): /scan, /camera/image_raw, /clock, /odom, /joint_states, 
 - `OpaqueFunction` 内で `TimerAction` を使って LifecycleNode (slam_toolbox 等) を遅延起動すると、autostart の状態遷移 (configure → activate) がブロックされる。LifecycleNode は `OpaqueFunction` の return リストに直接含めること
 - 閉じた環境 (slam_test.world 等) では、ロボットのスポーン位置 (`-x`, `-y`) を必ず指定する。デフォルト (0,0) だと壁の内側にスポーンする事故が起きる
 - `LaunchConfiguration` の値を `os.path.join` 等の Python 文字列操作で使うには `OpaqueFunction` + `.perform(context)` パターンが必要
+- launch プロセスの出力を `| head` でパイプ打ち切りすると、SIGPIPE で LifecycleNode の状態遷移が中断される。バックグラウンド実行時は `run_in_background` を使い出力制限をかけないこと
+
+### Nav2 (Phase 4a)
+
+- **AMCL / map_server / ekf_node は不要**: slam_toolbox が map→odom TF と /map を発行。同時起動は TF 競合
+- **bt_navigator の `plugin_lib_names`**: Nav2 Jazzy ではビルトイン BT プラグインは自動登録される。明示的に書くと「ID [ComputePathToPose] already registered」エラー。カスタムプラグイン追加時のみ使用
+- **`error_code_names` パラメータ**: bt_navigator に必須。未設定だと WARN
+- **twist_mux の `use_stamped`**: Jazzy では必須パラメータ。省略すると起動時クラッシュ
+- **lifecycle_manager のノード名**: パラメータ YAML のトップレベルキーとノード名を一致させること（例: `lifecycle_manager_navigation:` → `name='lifecycle_manager_navigation'`）
+- **`nav2_bringup/bringup_launch.py` は使わない**: AMCL + map_server 前提のため、個別ノード起動が必要
+- **VM 低負荷設定**: コストマップ resolution 0.1m、update_frequency 1-2Hz、raytrace_max_range 3.5m
 
 ### cloud-init (setup.yaml)
 
