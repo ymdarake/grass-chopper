@@ -59,10 +59,10 @@ make vm-nav2-test
 
 **成功基準**: `Goal finished with status: SUCCEEDED`
 
-SLAM 直後は地図が小さく遠距離ゴールは `error_code: 204` で失敗する場合がある。その場合は近距離テスト:
+SLAM 直後は地図が小さく遠距離ゴールは `error_code: 204` で失敗する場合がある。その場合は map 座標系で近距離テスト (SLAM は起動位置を原点とするため world 座標とずれる):
 
 ```bash
-multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {header: {frame_id: map}, pose: {position: {x: 1.0, y: -4.0, z: 0.0}, orientation: {w: 1.0}}}}" --feedback'
+multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {header: {frame_id: map}, pose: {position: {x: 1.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}" --feedback'
 ```
 
 ### Step 6: "After" スクリーンショット
