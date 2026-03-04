@@ -15,7 +15,7 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10           # BT ティック間隔 [ms]
-    default_server_timeout: 20     # アクションサーバータイムアウト [s]
+    default_server_timeout: 120    # アクションサーバータイムアウト [s]
     wait_for_service_timeout: 5    # サービス待機タイムアウト [s]
     action_server_result_timeout: 900.0
     navigators: ['navigate_to_pose', 'navigate_through_poses']
@@ -33,7 +33,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: true
-    controller_frequency: 10.0     # LiDAR 10Hz に合わせる
+    controller_frequency: 5.0      # VM 低負荷設定 (10→5 Hz)
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
@@ -44,7 +44,7 @@ controller_server:
     # ゴール到達判定
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15      # カバレッジ精度向上 (0.25→0.15) [m]
+      xy_goal_tolerance: 0.25      # VM 環境向けに緩和 (0.15→0.25) [m]
       yaw_goal_tolerance: 0.25     # 向きの許容誤差 [rad]
       stateful: true
 
@@ -93,7 +93,7 @@ planner_server:
       allow_unknown: true          # SLAM 未探索領域を通過許可
       max_iterations: 1000000
       max_on_approach_iterations: 1000
-      max_planning_time: 2.0       # 最大計画時間 [s]
+      max_planning_time: 5.0       # 最大計画時間 [s]
       cost_travel_multiplier: 2.0
       use_final_approach_orientation: false
       smoother:
@@ -172,7 +172,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55      # ロボット対角 + 安全マージン [m]
+        inflation_radius: 0.40      # VM 向けに縮小 (0.55→0.40) [m]
 
 # --- Local Costmap ---
 # ロボット周囲のローリングウィンドウ。障害物回避用

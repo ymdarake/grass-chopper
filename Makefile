@@ -43,7 +43,7 @@ vm-nav2-test:
 
 ## VM 内の ROS 2 / Gazebo 残留プロセスを一括停止
 vm-kill:
-	multipass exec ros2-vm -- bash -c 'killall -9 parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
+	multipass exec ros2-vm -- bash -c 'killall -9 coverage_commander_node parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
 
 ## VM 停止
 vm-stop:

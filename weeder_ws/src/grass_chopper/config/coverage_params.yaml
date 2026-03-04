@@ -9,10 +9,12 @@ coverage_commander_node:
   ros__parameters:
     use_sim_time: true
     # カバレッジ対象領域 [min_x, min_y, max_x, max_y] (map 座標系)
-    # coverage_test.world の 8m x 8m フィールド内、外壁から 1m バッファ
-    region: [-3.0, -3.0, 3.0, 3.0]
-    # 作業幅 [m] (ロボットの草刈り幅に合わせる)
-    swath_width: 0.18
+    # 注意: map フレームの原点はロボットの初期位置 (world の -3.5, -3.5)
+    # coverage_test.world (8m x 8m) の壁内側に収まるように設定
+    # 統合テスト向けにロボット近傍の小領域で検証
+    region: [0.5, 0.5, 4.0, 4.0]
+    # 作業幅 [m] (統合テスト用に広め)
+    swath_width: 1.0
     # 境界マージン [m] (壁からの安全距離)
     margin: 0.3
     # 走行方向 [rad] (0 = 東西方向のストライプ)
