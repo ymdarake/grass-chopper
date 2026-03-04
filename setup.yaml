@@ -134,6 +134,8 @@ runcmd:
   - apt-get install -y ros-jazzy-slam-toolbox ros-jazzy-nav2-map-server ros-jazzy-tf2-tools
   # Phase 4: Nav2 ナビゲーション関連パッケージ
   - apt-get install -y ros-jazzy-navigation2 ros-jazzy-nav2-bringup ros-jazzy-twist-mux
+  # Phase 4b: カバレッジ走行の計算ロジックに必要
+  - pip3 install shapely
 
   # =============================================
   # 4. rosdep の初期化

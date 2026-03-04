@@ -44,7 +44,7 @@ controller_server:
     # ゴール到達判定
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25      # 草刈り精度 [m]
+      xy_goal_tolerance: 0.15      # カバレッジ精度向上 (0.25→0.15) [m]
       yaw_goal_tolerance: 0.25     # 向きの許容誤差 [rad]
       stateful: true
 
@@ -57,8 +57,8 @@ controller_server:
     # RPP コントローラー設定
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.3      # 草刈り巡航速度 [m/s]
-      lookahead_dist: 0.6          # ロボット 2 台分先読み [m]
+      desired_linear_vel: 0.25     # カバレッジ精度優先で減速 (0.3→0.25) [m/s]
+      lookahead_dist: 0.4          # 精密追従 (0.6→0.4) [m]
       min_lookahead_dist: 0.2      # 狭い回廊でのスタック防止 [m]
       max_lookahead_dist: 0.9
       lookahead_time: 1.5

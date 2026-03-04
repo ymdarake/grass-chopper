@@ -54,6 +54,7 @@ setup(
     entry_points={
         'console_scripts': [
             'weeder_node = grass_chopper.weeder_node:main',
+            'coverage_commander_node = grass_chopper.coverage_commander_node:main',
         ],
     },
 )

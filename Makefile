@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure vm-build vm-sim vm-sim-nav2 vm-nav2 vm-nav2-test vm-kill vm-stop vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-nav2 vm-sim-coverage vm-nav2 vm-nav2-test vm-coverage vm-kill vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -6,7 +6,11 @@ check-syntax:
 
 ## 純粋ロジックテスト (Mac ホストで実行可能, rclpy 不要)
 test-pure:
-	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py -v
+	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py -v
+
+## カバレッジプランナーテスト (Mac ホストで実行可能)
+test-coverage:
+	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_coverage_planner.py -v
 
 ## VM 内で ROS 2 ワークスペースをビルド
 ## ※ マウント先にはビルド成果物を置けないため ~/weeder_build に出力
@@ -24,6 +28,14 @@ vm-sim-nav2:
 ## Nav2 スタック起動 (vm-sim-nav2 が起動済みの状態で実行)
 vm-nav2:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 launch grass_chopper nav2_launch.py'
+
+## カバレッジテスト用シミュレーション起動 (coverage_test.world + Nav2 モード)
+vm-sim-coverage:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=coverage_test.world x:=-3.5 y:=-3.5 nav2_mode:=true'
+
+## カバレッジ走行実行 (vm-sim-coverage + vm-nav2 が起動済みの状態で実行)
+vm-coverage:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 run grass_chopper coverage_commander_node --ros-args --params-file ~/weeder_build/install/grass_chopper/share/grass_chopper/config/coverage_params.yaml -p use_sim_time:=true'
 
 ## Nav2 NavigateToPose テスト (ゴール: (0.0, 4.0) へ移動)
 vm-nav2-test:
