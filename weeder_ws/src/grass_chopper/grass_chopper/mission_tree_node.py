@@ -26,6 +26,7 @@ BT 構造:
 """
 
 import math
+import os
 import subprocess
 
 import rclpy
@@ -264,7 +265,8 @@ class MissionTreeNode(Node):
             '--ros-args', '-p', 'use_sim_time:=true',
         ]
         if self._coverage_params_file:
-            cmd.extend(['--params-file', self._coverage_params_file])
+            expanded = os.path.expanduser(self._coverage_params_file)
+            cmd.extend(['--params-file', expanded])
 
         self.get_logger().info(f'カバレッジ走行を開始: {" ".join(cmd)}')
         try:

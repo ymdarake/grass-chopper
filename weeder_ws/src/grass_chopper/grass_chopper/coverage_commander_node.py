@@ -294,10 +294,11 @@ class CoverageCommanderNode(Node):
 
         # カバレッジ率推定
         ratio = estimate_coverage_ratio(self._waypoints, polygon, swath_width)
+        bounds = polygon.bounds  # (minx, miny, maxx, maxy)
         self.get_logger().info(
             f'カバレッジ走行計画: {self._total_waypoints} ウェイポイント, '
             f'推定カバレッジ率: {ratio:.1%}, '
-            f'領域: [{min_x}, {min_y}] ~ [{max_x}, {max_y}]'
+            f'領域: [{bounds[0]:.1f}, {bounds[1]:.1f}] ~ [{bounds[2]:.1f}, {bounds[3]:.1f}]'
         )
 
         # アクションサーバー接続待ち
@@ -305,6 +306,11 @@ class CoverageCommanderNode(Node):
         if not self._action_client.wait_for_server(timeout_sec=10.0):
             self.get_logger().error('Nav2 アクションサーバーに接続できませんでした')
             return
+
+        # コストマップ準備のため待機 (SLAM + Nav2 の初期化完了待ち)
+        self.get_logger().info('コストマップ準備待ち (10秒)...')
+        import time
+        time.sleep(10.0)
 
         # 最初のウェイポイントへナビゲーション開始
         self._navigate_to_next()
@@ -359,13 +365,13 @@ class CoverageCommanderNode(Node):
 
         if not enable_remow or self._remow_iteration >= max_iter:
             self.get_logger().info('カバレッジ走行完了!')
-            return
+            raise SystemExit(0)
 
         if self._coverage_grid_msg is None:
             self.get_logger().warn(
                 '再走行: /coverage_grid が未受信のためスキップ')
             self.get_logger().info('カバレッジ走行完了!')
-            return
+            raise SystemExit(0)
 
         # /coverage_grid から未カバー領域を検出
         min_area = self.get_parameter('remow_min_area').value
@@ -399,7 +405,7 @@ class CoverageCommanderNode(Node):
         if not uncovered:
             self.get_logger().info(
                 '再走行: 刈り残し領域なし。カバレッジ走行完了!')
-            return
+            raise SystemExit(0)
 
         self._remow_iteration += 1
         total_area = sum(r.area for r in uncovered)
@@ -423,7 +429,7 @@ class CoverageCommanderNode(Node):
         if not all_waypoints:
             self.get_logger().info(
                 '再走行: ウェイポイント生成不可。カバレッジ走行完了!')
-            return
+            raise SystemExit(0)
 
         self._waypoints = all_waypoints
         self._total_waypoints = len(all_waypoints)
@@ -518,7 +524,7 @@ def main(args=None):
 
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         node.get_logger().info('カバレッジコマンダーを停止します')
     finally:
         node.destroy_node()
