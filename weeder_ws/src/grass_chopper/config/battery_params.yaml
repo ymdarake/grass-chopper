@@ -1,0 +1,12 @@
+battery_sim_node:
+  ros__parameters:
+    update_frequency: 1.0       # 更新頻度 [Hz]
+    capacity_ah: 5.0            # バッテリー容量 [Ah]
+    voltage_full: 12.6          # 満充電電圧 [V]
+    voltage_empty: 10.0         # 空電圧 [V]
+    idle_current_a: 0.5         # アイドル電流 [A]
+    drive_current_a: 2.0        # 走行電流 [A]
+    mow_current_a: 3.0          # 草刈り電流 [A]
+    charge_current_a: 2.0       # 充電電流 [A]
+    low_threshold: 0.2          # 低バッテリー閾値 (SOC 20%)
+    critical_threshold: 0.1     # クリティカル閾値 (SOC 10%)

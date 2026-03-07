@@ -52,6 +52,11 @@
   <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>twist_mux</exec_depend>
 
+  <!-- Phase 4d: ミッション管理・バッテリー関連 -->
+  <exec_depend>py_trees</exec_depend>
+  <exec_depend>py_trees_ros</exec_depend>
+  <exec_depend>py_trees_ros_interfaces</exec_depend>
+
   <!-- テストフレームワーク -->
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

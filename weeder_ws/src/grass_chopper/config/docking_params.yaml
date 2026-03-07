@@ -1,0 +1,6 @@
+mission_tree_node:
+  ros__parameters:
+    home_x: 0.0              # 充電ステーション x [m]
+    home_y: 0.0              # 充電ステーション y [m]
+    low_threshold: 0.2       # 低バッテリー閾値
+    target_coverage: 0.9     # 目標カバレッジ率

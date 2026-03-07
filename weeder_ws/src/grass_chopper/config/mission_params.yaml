@@ -1,0 +1,8 @@
+mission_tree_node:
+  ros__parameters:
+    tick_frequency: 2.0                # ティック頻度 [Hz]
+    home_x: 0.0                        # ホーム位置 x [m] (map フレーム)
+    home_y: 0.0                        # ホーム位置 y [m]
+    low_threshold: 0.2                 # 低バッテリー閾値 (SOC 20%)
+    target_coverage: 0.9              # 目標カバレッジ率 (90%)
+    coverage_commander_params_file: "" # カバレッジコマンダーのパラメータファイルパス
