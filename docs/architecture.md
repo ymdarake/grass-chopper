@@ -94,8 +94,14 @@ Gazebo と ROS 2 の間でメッセージ型を変換する薄いレイヤーで
 
 ロボットの知能にあたる部分です。
 
-- **weeder_node**: LiDAR データを受け取り、障害物回避ロジックを実行し、速度指令を発行
+- **mission_tree_node**: ミッション管理ステートマシン (IDLE/COVERAGE/RETURNING/CHARGING)
+- **battery_sim_node**: バッテリーシミュレーション (`/battery_state` 配信)
+- **coverage_commander_node**: カバレッジ走行 (NavigateToPose でウェイポイント順次送信)
+- **coverage_tracker_node**: リアルタイムカバレッジ率計算 (`/coverage_ratio` 配信)
+- **Nav2 スタック**: 経路計画 + 経路追従 (SmacPlanner2D + RPP)
+- **slam_toolbox**: SLAM (map→odom TF + `/map` 配信)
 - **robot_state_publisher**: URDF を解析して TF (座標変換ツリー) を発行
+- **weeder_node**: LiDAR 障害物回避 (Phase 2, Nav2 移行後は未使用)
 
 ### 4. GUI 層 (noVNC)
 
