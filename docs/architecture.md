@@ -94,11 +94,13 @@ Gazebo と ROS 2 の間でメッセージ型を変換する薄いレイヤーで
 
 ロボットの知能にあたる部分です。
 
-- **mission_tree_node**: ミッション管理ステートマシン (IDLE/COVERAGE/RETURNING/CHARGING)
+- **mission_tree_node**: ミッション管理ステートマシン (IDLE/COVERAGE/RETURNING/DOCKING/CHARGING)
 - **battery_sim_node**: バッテリーシミュレーション (`/battery_state` 配信)
-- **coverage_commander_node**: カバレッジ走行 (NavigateToPose でウェイポイント順次送信)
+- **coverage_commander_node**: カバレッジ走行 (NavigateToPose でウェイポイント順次送信、中断再開対応)
 - **coverage_tracker_node**: リアルタイムカバレッジ率計算 (`/coverage_ratio` 配信)
 - **Nav2 スタック**: 経路計画 + 経路追従 (SmacPlanner2D + RPP)
+- **opennav_docking**: 精密ドッキング (DockRobot アクション、Phase 4e)
+- **apriltag_ros**: AprilTag マーカー検出 (充電ステーション位置推定、Phase 4e)
 - **slam_toolbox**: SLAM (map→odom TF + `/map` 配信)
 - **robot_state_publisher**: URDF を解析して TF (座標変換ツリー) を発行
 - **weeder_node**: LiDAR 障害物回避 (Phase 2, Nav2 移行後は未使用)
