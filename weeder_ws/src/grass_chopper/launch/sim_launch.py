@@ -118,6 +118,8 @@ def _launch_setup(context, *args, **kwargs):
             '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             # カメラ画像: Gazebo → ROS 2 (RGB画像)
             '/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
+            # カメラ情報: Gazebo → ROS 2 (内部パラメータ, AprilTag 検出用)
+            '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             # シミュレーション時刻: Gazebo → ROS 2
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             # オドメトリ: Gazebo → ROS 2 (ロボットの位置・速度推定)

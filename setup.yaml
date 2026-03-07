@@ -140,6 +140,8 @@ runcmd:
   - pip3 install opencv-python-headless
   # Phase 4d: ミッション管理 (py_trees_ros)
   - apt-get install -y ros-jazzy-py-trees ros-jazzy-py-trees-ros ros-jazzy-py-trees-ros-interfaces
+  # Phase 4e: 精密ドッキング (opennav_docking + AprilTag)
+  - apt-get install -y ros-jazzy-opennav-docking ros-jazzy-apriltag-ros
 
   # =============================================
   # 4. rosdep の初期化

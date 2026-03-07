@@ -5,13 +5,14 @@
 ROS 2 に依存しない純粋関数モジュール。
 Mac ホスト上で pytest のみでテスト実行可能。
 
-MVP: NavigateToPose でホーム位置へ帰還。到着 = 充電開始と単純化。
-将来: opennav_docking で精密ドッキング (AprilTag)。
+opennav_docking で精密ドッキング (AprilTag) を行う。
+ドッキング失敗時はリトライ → フォールバック (NavigateToPose) のロジックを持つ。
 ============================================================================
 """
 
 import math
 from dataclasses import dataclass
+from enum import Enum
 
 
 @dataclass(frozen=True)
@@ -98,3 +99,32 @@ def compute_dock_alignment_twist(
     angular = kp_angular * yaw_error
 
     return linear, angular
+
+
+class DockingAction(Enum):
+    """ドッキング結果に基づく次のアクション"""
+    COMPLETE = "complete"    # ドッキング成功 → 充電開始
+    RETRY = "retry"          # リトライ → 再度 DockRobot
+    FALLBACK = "fallback"    # フォールバック → NavigateToPose でホーム帰還
+
+
+def evaluate_docking_result(
+    attempt_count: int,
+    max_retries: int,
+    succeeded: bool,
+) -> DockingAction:
+    """
+    ドッキング結果を評価し、次のアクションを決定する
+
+    Args:
+        attempt_count: 現在の試行回数 (0始まり)
+        max_retries: 最大リトライ回数
+        succeeded: ドッキング成功したか
+    Returns:
+        次に取るべきアクション
+    """
+    if succeeded:
+        return DockingAction.COMPLETE
+    if attempt_count >= max_retries:
+        return DockingAction.FALLBACK
+    return DockingAction.RETRY

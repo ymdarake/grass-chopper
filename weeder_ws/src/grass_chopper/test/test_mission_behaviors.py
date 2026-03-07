@@ -12,11 +12,15 @@ import math
 import pytest
 
 from grass_chopper.mission_behaviors import (
+    CoverageProgress,
     MissionState,
     compute_home_pose,
+    get_resume_index,
     should_continue_charging,
+    should_resume_coverage,
     should_return_home,
     should_start_coverage,
+    update_progress,
 )
 
 
@@ -213,3 +217,101 @@ class TestComputeHomePose:
         assert x == pytest.approx(0.0)
         assert y == pytest.approx(0.0)
         assert yaw == pytest.approx(0.0)
+
+
+# ============================================================================
+# TestCoverageProgress
+# ============================================================================
+
+class TestCoverageProgress:
+    """CoverageProgress データクラステスト"""
+
+    def test_creation(self):
+        """正常に生成できる"""
+        progress = CoverageProgress(
+            total_waypoints=10,
+            completed_index=-1,
+        )
+        assert progress.total_waypoints == 10
+        assert progress.completed_index == -1
+
+    def test_frozen(self):
+        """frozen=True で変更不可"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=-1)
+        with pytest.raises(AttributeError):
+            progress.total_waypoints = 5
+
+
+class TestUpdateProgress:
+    """update_progress: 進捗更新"""
+
+    def test_basic_update(self):
+        """インデックスが正しく更新される"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=-1)
+        updated = update_progress(progress, completed_index=3)
+        assert updated.completed_index == 3
+        assert updated.total_waypoints == 10
+
+    def test_update_preserves_total(self):
+        """total_waypoints を省略すると元の値が維持される"""
+        progress = CoverageProgress(total_waypoints=20, completed_index=5)
+        updated = update_progress(progress, completed_index=10)
+        assert updated.total_waypoints == 20
+        assert updated.completed_index == 10
+
+    def test_update_with_total_waypoints(self):
+        """total_waypoints も同時に更新できる"""
+        progress = CoverageProgress(total_waypoints=0, completed_index=-1)
+        updated = update_progress(progress, completed_index=3, total_waypoints=10)
+        assert updated.total_waypoints == 10
+        assert updated.completed_index == 3
+
+    def test_update_total_waypoints_overrides(self):
+        """total_waypoints を指定すると上書きされる"""
+        progress = CoverageProgress(total_waypoints=5, completed_index=2)
+        updated = update_progress(progress, completed_index=2, total_waypoints=15)
+        assert updated.total_waypoints == 15
+
+
+class TestGetResumeIndex:
+    """get_resume_index: 再開インデックスの取得"""
+
+    def test_resume_from_middle(self):
+        """中断地点の手前 (completed_index) から再開"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=4)
+        # completed_index=4 → ウェイポイント0~4完了 → 5から再開
+        assert get_resume_index(progress) == 5
+
+    def test_resume_from_beginning(self):
+        """未開始 (completed_index=-1) → 0から開始"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=-1)
+        assert get_resume_index(progress) == 0
+
+    def test_all_complete_returns_zero(self):
+        """全完了 → 0 (最初からやり直し)"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=9)
+        assert get_resume_index(progress) == 0
+
+
+class TestShouldResumeCoverage:
+    """should_resume_coverage: 再開すべきかの判定"""
+
+    def test_has_remaining_returns_true(self):
+        """中断して残ウェイポイントあり → 再開する"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=4)
+        assert should_resume_coverage(progress) is True
+
+    def test_all_complete_returns_false(self):
+        """全完了 → 再開しない (新しいサイクル)"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=9)
+        assert should_resume_coverage(progress) is False
+
+    def test_not_started_returns_false(self):
+        """未開始 → 再開ではなく新規開始"""
+        progress = CoverageProgress(total_waypoints=10, completed_index=-1)
+        assert should_resume_coverage(progress) is False
+
+    def test_zero_waypoints_returns_false(self):
+        """ウェイポイントなし → 再開しない"""
+        progress = CoverageProgress(total_waypoints=0, completed_index=-1)
+        assert should_resume_coverage(progress) is False

@@ -3,6 +3,11 @@ mission_tree_node:
     tick_frequency: 2.0                # ティック頻度 [Hz]
     home_x: 0.0                        # ホーム位置 x [m] (map フレーム)
     home_y: 0.0                        # ホーム位置 y [m]
+    home_yaw: 0.0                      # ドック正面の方向 [rad]
     low_threshold: 0.2                 # 低バッテリー閾値 (SOC 20%)
     target_coverage: 0.9              # 目標カバレッジ率 (90%)
     coverage_commander_params_file: "~/weeder_build/install/grass_chopper/share/grass_chopper/config/coverage_params.yaml"
+    # --- ドッキング設定 (Phase 4e) ---
+    enable_docking: false              # true: opennav_docking, false: MVP (NavigateToPose)
+    max_docking_retries: 3             # ドッキング最大リトライ回数
+    dock_id: "charging_dock_1"         # ドック ID (docking_server_params.yaml と一致)

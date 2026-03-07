@@ -11,9 +11,11 @@ import math
 import pytest
 
 from grass_chopper.docking_behavior import (
+    DockingAction,
     DockingParams,
     compute_approach_pose,
     compute_dock_alignment_twist,
+    evaluate_docking_result,
     is_at_dock,
 )
 
@@ -112,3 +114,35 @@ class TestComputeDockAlignmentTwist:
             current_x=1.0, current_y=0.0, current_yaw=math.pi, params=params)
         # ドックに向かうため前進方向の速度が正
         assert linear != 0.0 or angular != 0.0
+
+
+# ============================================================================
+# TestEvaluateDockingResult
+# ============================================================================
+
+class TestEvaluateDockingResult:
+    """evaluate_docking_result: ドッキング結果の評価"""
+
+    def test_success(self):
+        """ドッキング成功 → COMPLETE"""
+        result = evaluate_docking_result(
+            attempt_count=1, max_retries=3, succeeded=True)
+        assert result == DockingAction.COMPLETE
+
+    def test_retry_on_failure(self):
+        """失敗でリトライ回数残り → RETRY"""
+        result = evaluate_docking_result(
+            attempt_count=1, max_retries=3, succeeded=False)
+        assert result == DockingAction.RETRY
+
+    def test_fallback_on_max_retries(self):
+        """最大リトライ到達 → FALLBACK"""
+        result = evaluate_docking_result(
+            attempt_count=3, max_retries=3, succeeded=False)
+        assert result == DockingAction.FALLBACK
+
+    def test_first_attempt_success(self):
+        """初回成功 → COMPLETE"""
+        result = evaluate_docking_result(
+            attempt_count=0, max_retries=3, succeeded=True)
+        assert result == DockingAction.COMPLETE

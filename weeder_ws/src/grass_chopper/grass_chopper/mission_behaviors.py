@@ -60,6 +60,56 @@ def should_continue_charging(state: MissionState) -> bool:
     return state.battery_percentage < 0.999
 
 
+@dataclass(frozen=True)
+class CoverageProgress:
+    """カバレッジ走行の進捗 (中断・再開用)"""
+    total_waypoints: int    # 全ウェイポイント数
+    completed_index: int    # 最後に完了したウェイポイントのインデックス (-1: 未開始)
+
+
+def update_progress(
+    progress: CoverageProgress,
+    completed_index: int,
+    total_waypoints: int | None = None,
+) -> CoverageProgress:
+    """進捗を更新して新しい CoverageProgress を返す"""
+    return CoverageProgress(
+        total_waypoints=(total_waypoints if total_waypoints is not None
+                         else progress.total_waypoints),
+        completed_index=completed_index,
+    )
+
+
+def get_resume_index(progress: CoverageProgress) -> int:
+    """
+    再開すべきウェイポイントインデックスを返す
+
+    - 中断時: completed_index + 1 (次の未完了ウェイポイント)
+    - 全完了: 0 (最初からやり直し)
+    - 未開始: 0
+    """
+    if progress.completed_index < 0:
+        return 0
+    if progress.completed_index >= progress.total_waypoints - 1:
+        return 0
+    return progress.completed_index + 1
+
+
+def should_resume_coverage(progress: CoverageProgress) -> bool:
+    """
+    中断したカバレッジを再開すべきか判定する
+
+    条件: 開始済み (completed_index >= 0) かつ未完了
+    """
+    if progress.total_waypoints <= 0:
+        return False
+    if progress.completed_index < 0:
+        return False
+    if progress.completed_index >= progress.total_waypoints - 1:
+        return False
+    return True
+
+
 def compute_home_pose(
     current_x: float,
     current_y: float,

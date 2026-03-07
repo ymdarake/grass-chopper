@@ -3,12 +3,13 @@
   ============================================================================
   Gazebo Harmonic ワールドファイル: ドッキングテスト環境
   ============================================================================
-  8m x 8m の正方形フィールド + 充電ステーション。
-  ミッション管理 (走行→帰還→充電→再開) テストに使用する。
+  8m x 8m の正方形フィールド + 充電ステーション + AprilTag マーカー。
+  ミッション管理 (走行→帰還→ドッキング→充電→再開) テストに使用する。
 
   構成:
     - 外壁 4 枚 (8m x 8m の正方形)
     - 充電ステーション: (3.5, -3.5, 0) — 南東コーナー壁際
+    - AprilTag 36h11 ID 0: 充電ステーション西面 (ロボットから見える位置)
     - ロボット初期位置: (-3.5, -3.5, 0) — 南西コーナー付近
 
   充電ステーションの map 座標 (ロボット初期位置が map 原点):
@@ -166,6 +167,35 @@
             <ixx>0.17</ixx><iyy>0.17</iyy><izz>0.13</izz>
           </inertia>
         </inertial>
+      </link>
+    </model>
+
+    <!--
+      AprilTag 36h11 ID 0 — 充電ステーション西面に設置
+      ロボットが西側から接近するため、タグは西を向く (yaw = π)
+      位置: 充電ステーション西面の中心 (x = 3.5 - 0.2 = 3.3)
+      高さ: ロボットのカメラ高さ (約 0.125m) に合わせる
+    -->
+    <model name="apriltag_marker">
+      <pose>3.28 -3.5 0.125 0 0 3.14159</pose>
+      <static>true</static>
+      <link name="tag_link">
+        <visual name="tag_visual">
+          <geometry>
+            <box>
+              <size>0.001 0.15 0.15</size>
+            </box>
+          </geometry>
+          <material>
+            <pbr>
+              <metal>
+                <albedo_map>model://apriltag_dock/materials/textures/tag36_11_00000.png</albedo_map>
+                <roughness>1.0</roughness>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
       </link>
     </model>
 

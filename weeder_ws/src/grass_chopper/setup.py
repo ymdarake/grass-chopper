@@ -41,6 +41,13 @@ setup(
         # パラメータ設定ファイルをコピー
         (os.path.join('share', package_name, 'config'),
             glob(os.path.join('config', '*.yaml'))),
+        # AprilTag モデルファイルをコピー
+        (os.path.join('share', package_name, 'models', 'apriltag_dock'),
+            ['models/apriltag_dock/model.sdf',
+             'models/apriltag_dock/model.config']),
+        (os.path.join('share', package_name, 'models', 'apriltag_dock',
+                       'materials', 'textures'),
+            ['models/apriltag_dock/materials/textures/tag36_11_00000.png']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
