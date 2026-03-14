@@ -6,7 +6,7 @@ check-syntax:
 
 ## 純粋ロジックテスト (Mac ホストで実行可能, rclpy 不要)
 test-pure:
-	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py test/test_map_region_detector.py test/test_battery_simulator.py test/test_mission_behaviors.py test/test_docking_behavior.py test/test_incline_monitor.py -v
+	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py test/test_map_region_detector.py test/test_battery_simulator.py test/test_mission_behaviors.py test/test_docking_behavior.py test/test_incline_monitor.py test/test_pico_protocol.py -v
 
 ## カバレッジプランナーテスト (Mac ホストで実行可能)
 test-coverage:
