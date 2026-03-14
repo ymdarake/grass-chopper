@@ -44,8 +44,10 @@ grass-chopper/
     │   ├── battery_sim_node.py             # バッテリー ROS 2 ノード (Phase 4d)
     │   ├── mission_behaviors.py            # ミッション判断ロジック (Phase 4d-e)
     │   ├── mission_tree_node.py            # ミッション管理ステートマシン (Phase 4d-e)
-    │   └── docking_behavior.py             # ドッキング行動ロジック (Phase 4d-e)
-    ├── test/                               # 172 テスト (Mac ホストで実行可)
+    │   ├── docking_behavior.py             # ドッキング行動ロジック (Phase 4d-e)
+    │   ├── incline_monitor.py              # 傾斜検知 純粋ロジック (Phase 4f)
+    │   └── incline_monitor_node.py         # 傾斜検知 ROS 2 アダプター (Phase 4f)
+    ├── test/                               # 189 テスト (Mac ホストで実行可)
     │   ├── test_obstacle_avoidance.py      # 41件
     │   ├── test_coverage_planner.py        # 27件
     │   ├── test_coverage_tracker.py        # 20件
@@ -53,6 +55,7 @@ grass-chopper/
     │   ├── test_battery_simulator.py       # 18件
     │   ├── test_mission_behaviors.py       # 27件
     │   ├── test_docking_behavior.py        # 12件
+    │   ├── test_incline_monitor.py         # 17件
     │   └── test_weeder_node.py             # VM 統合テスト (rclpy 必要)
     ├── config/
     │   ├── weeder_params.yaml              # 障害物回避パラメータ
@@ -63,7 +66,8 @@ grass-chopper/
     │   ├── battery_params.yaml             # バッテリーパラメータ (Phase 4d)
     │   ├── mission_params.yaml             # ミッション管理パラメータ (Phase 4d-e)
     │   ├── docking_server_params.yaml      # opennav_docking パラメータ (Phase 4e)
-    │   └── apriltag_params.yaml            # AprilTag 検出パラメータ (Phase 4e)
+    │   ├── apriltag_params.yaml            # AprilTag 検出パラメータ (Phase 4e)
+    │   └── incline_params.yaml             # 傾斜検知パラメータ (Phase 4f)
     ├── launch/
     │   ├── sim_launch.py                   # 一括起動 (Gazebo + SLAM + Bridge)
     │   ├── nav2_launch.py                  # Nav2 スタック起動 (Phase 4a)
@@ -75,7 +79,9 @@ grass-chopper/
         ├── slam_test.world                 # SLAM ループクロージャ検証環境
         ├── coverage_test.world             # カバレッジテスト 8m×8m (Phase 4b)
         ├── coverage_obstacles.world        # 障害物カバレッジテスト (Phase 4c)
-        └── docking_test.world              # ドッキング・充電ステーション (Phase 4d-e)
+        ├── docking_test.world              # ドッキング・充電ステーション (Phase 4d-e)
+        ├── slope_test.world                # 傾斜面テスト環境 (Phase 4f)
+        └── dynamic_obstacles.world         # 動的障害物テスト環境 (Phase 4f)
 ```
 
 ## アーキテクチャ原則
