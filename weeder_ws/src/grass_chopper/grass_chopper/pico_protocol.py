@@ -48,6 +48,9 @@ def decode_velocity_command(msg: str) -> tuple[float, float] | None:
     """
     try:
         msg = msg.strip()
+        # チェックサムが含まれている場合は分離する
+        if "*" in msg:
+            msg, _ = msg.rsplit("*", 1)
         if not msg.startswith("V,"):
             return None
         parts = msg[2:].split(",")
@@ -95,6 +98,9 @@ def decode_encoder_feedback(
     """
     try:
         msg = msg.strip()
+        # チェックサムが含まれている場合は分離する
+        if "*" in msg:
+            msg, _ = msg.rsplit("*", 1)
         if not msg.startswith("E,"):
             return None
         parts = msg[2:].split(",")
@@ -243,6 +249,8 @@ def ticks_to_radians(ticks: int, ticks_per_rev: int) -> float:
     Returns:
         ラジアン
     """
+    if ticks_per_rev <= 0:
+        return 0.0
     return (ticks / ticks_per_rev) * 2.0 * math.pi
 
 
@@ -257,4 +265,6 @@ def radians_to_ticks(radians: float, ticks_per_rev: int) -> float:
     Returns:
         ticks (float)
     """
+    if ticks_per_rev <= 0:
+        return 0.0
     return (radians / (2.0 * math.pi)) * ticks_per_rev

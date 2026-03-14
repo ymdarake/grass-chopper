@@ -89,6 +89,13 @@ class TestDecodeVelocityCommand:
         result = decode_velocity_command("V,1.0\n")
         assert result is None
 
+    def test_with_checksum(self):
+        """チェックサム付きメッセージをデコードできる"""
+        msg = append_checksum("V,1.000,-1.000")
+        left, right = decode_velocity_command(msg)
+        assert left == pytest.approx(1.0)
+        assert right == pytest.approx(-1.0)
+
 
 # ============================================================================
 # TestEncodeEncoderFeedback
@@ -139,6 +146,17 @@ class TestDecodeEncoderFeedback:
         """空文字列 → None"""
         result = decode_encoder_feedback("")
         assert result is None
+
+    def test_with_checksum(self):
+        """チェックサム付きメッセージをデコードできる"""
+        msg = append_checksum("E,1000,-500,2.500,-1.200")
+        result = decode_encoder_feedback(msg)
+        assert result is not None
+        left_ticks, right_ticks, left_vel, right_vel = result
+        assert left_ticks == 1000
+        assert right_ticks == -500
+        assert left_vel == pytest.approx(2.5)
+        assert right_vel == pytest.approx(-1.2)
 
 
 # ============================================================================
@@ -276,3 +294,8 @@ class TestTicksConversion:
         rad = ticks_to_radians(original, 1440)
         back = radians_to_ticks(rad, 1440)
         assert back == pytest.approx(original)
+
+    def test_zero_ticks_per_rev(self):
+        """ticks_per_rev=0 → 0.0 (ZeroDivisionError を防止)"""
+        assert ticks_to_radians(100, 0) == pytest.approx(0.0)
+        assert radians_to_ticks(1.0, 0) == pytest.approx(0.0)
