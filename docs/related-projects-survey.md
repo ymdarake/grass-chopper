@@ -8,7 +8,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| URL | github.com/ClemensElflein/OpenMower |
+| URL | https://github.com/ClemensElflein/OpenMower |
 | ROS 2 版 | github.com/jkaflik/OpenMowerNext (Jazzy 移植) |
 | ハードウェア | YardForce Classic 500 を改造、Pi 4/5 + Pico、xESC BLDC ドライバ |
 | 測位 | RTK-GPS (u-blox F9P)、ペリメーターワイヤー不要 |
@@ -169,3 +169,86 @@
 | **検討** | Web UI (ミッション管理画面) | SmartMower | ¥0 (開発コスト) |
 | **将来** | カメラ物体検出 (人・動物) | Roktrack2 | Jetson 必要 |
 | **将来** | Fields2Cover 移行 | OpenMowerNext | ¥0 (開発コスト) |
+
+---
+
+## 6. 日本での調達可能性
+
+### 6.1 ドナーロボット芝刈り機 (OpenMower 方式)
+
+OpenMower で使う **YardForce Classic 500 / SA650 / SA900 は日本未発売**。
+YardForce Japan (エアロボックス社) は手持ち草刈機のみ販売しており、ロボット芝刈り機は取り扱いなし。
+
+| 調達方法 | 可否 | 備考 |
+|---------|------|------|
+| Amazon.co.jp | ✕ | 出品なし |
+| 楽天市場 | ✕ | YardForce 公式ショップにロボット芝刈り機なし |
+| Amazon.de / Amazon.co.uk から個人輸入 | △ | 本体 €300〜500 + 送料 + 関税。発送不可の場合あり |
+| eBay | △ | 中古品あり、送料が高い (¥10,000〜20,000) |
+
+**結論: YardForce の個人輸入は手間とコストが高く、現実的ではない。**
+
+### 6.2 日本で買える代替ロボット芝刈り機
+
+| 製品 | 価格 | 入手先 | OpenMower 互換 | 改造しやすさ |
+|------|------|--------|---------------|------------|
+| **PLOW AGC180** | ¥49,800 | plow-power.com, Amazon | ✕ (独自基板) | △ モーター・バッテリー流用は可能性あり |
+| **PLOW AGC210** | ¥79,800 | plow-power.com, Amazon | ✕ | △ |
+| **Husqvarna Automower Aspire R4** | ¥127,270 | Amazon, 代理店 | ✕ | ✕ (複雑すぎ) |
+| **Worx Landroid** | ¥80,000〜150,000 | Amazon | ✕ | △ |
+| **GARDENA SILENO minimo** | ¥175,000 | 楽天 | ✕ | ✕ |
+
+**最安の選択肢: PLOW AGC180 (¥49,800)**
+- フレーム・刃・バッテリー・モーターを流用し、制御基板を Pi 5 + Pico に置き換える
+- ただし OpenMower のメインボードは使えない (YardForce 専用設計のため)
+- モーターの型番・電圧を調べて、汎用ドライバで制御する必要がある
+
+### 6.3 OpenMower アップグレードキット
+
+| 部品 | 購入先 | 価格 | 日本発送 |
+|------|--------|------|---------|
+| **OpenMower Mainboard** (xESC×3 + Pico + IMU) | devops.care (Gadgets by Vermut) | €180〜220 | ○ (欧州から DHL) |
+| **ArduSimple simpleRTK2B** | ardusimple.com | €180〜250 | ○ (DHL 2〜4日、2024年値下げ済み) |
+| **Raspberry Pi 5 (8GB)** | Amazon.co.jp, スイッチサイエンス | ¥12,000〜15,000 | ○ |
+| **RPLidar A1M8** | Amazon.co.jp, AliExpress | ¥12,000〜15,000 | ○ |
+
+### 6.4 推奨する調達パターン
+
+#### パターン A: フルスクラッチ (推奨)
+
+grass-chopper の Phase 5 設計案通り、フレームから自作。
+
+| 項目 | 調達先 | 費用 |
+|------|--------|------|
+| Pi 5 + Pico + LiDAR + IMU + モーター等 | Amazon.co.jp, スイッチサイエンス | ¥71,000〜76,000 |
+| (オプション) RTK-GPS | ardusimple.com | +¥30,000 |
+| フレーム | アルミフレーム or 3D プリント | ¥5,000〜10,000 |
+
+**メリット**: 全部品が日本で調達可能、設計の自由度が高い
+**デメリット**: 防水・刃の設計を自分でやる必要がある
+
+#### パターン B: PLOW AGC180 改造
+
+| 項目 | 調達先 | 費用 |
+|------|--------|------|
+| PLOW AGC180 (ドナー) | Amazon.co.jp | ¥49,800 |
+| Pi 5 + Pico + LiDAR + IMU | Amazon.co.jp | ¥35,000 |
+| モータードライバ (汎用) | Amazon.co.jp | ¥3,000 |
+| (オプション) RTK-GPS | ardusimple.com | +¥30,000 |
+| **合計** | | **¥87,800〜117,800** |
+
+**メリット**: フレーム・刃・バッテリー・防水が解決済み
+**デメリット**: モーター仕様の調査が必要、OpenMower メインボードは使えない
+
+#### パターン C: YardForce 個人輸入 + OpenMower キット
+
+| 項目 | 調達先 | 費用 |
+|------|--------|------|
+| YardForce SA650 | Amazon.de から輸入 | ¥50,000〜70,000 (送料・関税込み) |
+| OpenMower Mainboard | devops.care | ¥30,000 |
+| Pi 5 + LiDAR | Amazon.co.jp | ¥27,000 |
+| ArduSimple RTK | ardusimple.com | ¥30,000 |
+| **合計** | | **¥137,000〜157,000** |
+
+**メリット**: OpenMower のエコシステムをそのまま使える、コミュニティの知見が活用可能
+**デメリット**: 最も高価、輸入リスク (初期不良時の返品が困難)
