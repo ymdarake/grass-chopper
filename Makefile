@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-headless vm-sim-nav2 vm-sim-coverage vm-sim-obstacles vm-sim-mission vm-sim-mission-headless vm-nav2 vm-nav2-test vm-coverage vm-coverage-obstacles vm-mission vm-battery vm-docking vm-kill vm-stop vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-headless vm-sim-nav2 vm-sim-coverage vm-sim-obstacles vm-sim-mission vm-sim-mission-headless vm-sim-slope vm-sim-dynamic vm-nav2 vm-nav2-test vm-coverage vm-coverage-obstacles vm-mission vm-battery vm-docking vm-incline vm-kill vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -6,7 +6,7 @@ check-syntax:
 
 ## 純粋ロジックテスト (Mac ホストで実行可能, rclpy 不要)
 test-pure:
-	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py test/test_map_region_detector.py test/test_battery_simulator.py test/test_mission_behaviors.py test/test_docking_behavior.py -v
+	cd weeder_ws/src/grass_chopper && python3 -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py test/test_map_region_detector.py test/test_battery_simulator.py test/test_mission_behaviors.py test/test_docking_behavior.py test/test_incline_monitor.py -v
 
 ## カバレッジプランナーテスト (Mac ホストで実行可能)
 test-coverage:
@@ -65,6 +65,18 @@ vm-battery:
 vm-mission:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 run grass_chopper mission_tree_node --ros-args --params-file ~/weeder_build/install/grass_chopper/share/grass_chopper/config/mission_params.yaml -p use_sim_time:=true'
 
+## 傾斜テスト用シミュレーション起動 (slope_test.world + Nav2 モード)
+vm-sim-slope:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=slope_test.world x:=0.0 y:=-3.0 nav2_mode:=true'
+
+## 傾斜検知ノード起動 (vm-sim-slope が起動済みの状態で実行)
+vm-incline:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && ros2 run grass_chopper incline_monitor_node --ros-args --params-file ~/weeder_build/install/grass_chopper/share/grass_chopper/config/incline_params.yaml -p use_sim_time:=true'
+
+## 動的障害物テスト用シミュレーション起動 (dynamic_obstacles.world + Nav2 モード)
+vm-sim-dynamic:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py world:=dynamic_obstacles.world x:=0.0 y:=-3.0 nav2_mode:=true'
+
 ## ドッキングスタック起動 (vm-sim-mission + vm-nav2 が起動済みの状態で実行)
 vm-docking:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export GZ_SIM_RESOURCE_PATH=~/weeder_build/install/grass_chopper/share/grass_chopper/models:$${GZ_SIM_RESOURCE_PATH} && ros2 launch grass_chopper docking_launch.py'
@@ -75,7 +87,7 @@ vm-nav2-test:
 
 ## VM 内の ROS 2 / Gazebo 残留プロセスを一括停止
 vm-kill:
-	multipass exec ros2-vm -- bash -c 'killall -9 mission_tree_node battery_sim_node coverage_tracker_node coverage_commander_node docking_server apriltag_node parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
+	multipass exec ros2-vm -- bash -c 'killall -9 incline_monitor_node mission_tree_node battery_sim_node coverage_tracker_node coverage_commander_node docking_server apriltag_node parameter_bridge ruby gz sim ros2 robot_state_publisher slam_toolbox controller_server planner_server behavior_server bt_navigator waypoint_follower lifecycle_manager twist_mux weeder_node 2>/dev/null; sleep 1; echo "cleaned"'
 
 ## VM 停止
 vm-stop:

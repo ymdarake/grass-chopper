@@ -226,3 +226,4 @@ lifecycle_manager_navigation:
       - behavior_server
       - bt_navigator
       - waypoint_follower
+      - collision_monitor

@@ -1,0 +1,250 @@
+<?xml version="1.0" ?>
+<!--
+  ============================================================================
+  Gazebo Harmonic ワールドファイル: 動的障害物テスト環境
+  ============================================================================
+  8m x 8m の正方形フィールド + 移動する障害物。
+  Collision Monitor の動的障害物対応テストに使用する (Phase 4f)。
+
+  構成:
+    - 外壁 4 枚 (8m x 8m)
+    - 静的障害物: 中央付近の箱
+    - 動的障害物 1: Y 軸方向に往復移動する円柱 (歩行者モデル)
+    - 動的障害物 2: X 軸方向に往復移動する箱 (カートモデル)
+    - ロボット初期位置: (0.0, -3.0, 0) — 南側
+
+  動的障害物の動作:
+    - gz-sim-move-to プラグインは Harmonic にないため、
+      LinearVelocity プラグインで一定速度の移動を実現する
+  ============================================================================
+-->
+<sdf version="1.8">
+  <world name="dynamic_obstacles_world">
+
+    <!-- 必須プラグイン -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- 太陽光 -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 地面 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.2 0.6 0.2 1</ambient>
+            <diffuse>0.2 0.6 0.2 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 外壁 (8m x 8m) -->
+    <model name="wall_north">
+      <pose>0 4 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_south">
+      <pose>0 -4 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>8.4 0.2 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_east">
+      <pose>4 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_west">
+      <pose>-4 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 8.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============================================================ -->
+    <!-- 静的障害物: 中央付近の箱                                    -->
+    <!-- ============================================================ -->
+    <model name="static_box">
+      <pose>1.5 0 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+          <material>
+            <ambient>0.6 0.3 0.1 1</ambient>
+            <diffuse>0.6 0.3 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============================================================ -->
+    <!-- 動的障害物 1: 円柱 (歩行者モデル)                          -->
+    <!-- ============================================================ -->
+    <!-- gz topic コマンドで移動可能:                                -->
+    <!--   gz topic -t /model/moving_pedestrian/cmd_vel              -->
+    <!--     -m gz.msgs.Twist -p 'linear: {y: 0.5}'                 -->
+    <model name="moving_pedestrian">
+      <pose>-1.0 -2.0 0.4 0 0 0</pose>
+      <link name="body">
+        <inertial>
+          <mass>10.0</mass>
+          <inertia>
+            <ixx>0.5</ixx><iyy>0.5</iyy><izz>0.25</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.8</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.8</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- VelocityControl: cmd_vel トピックで移動制御可能にする -->
+      <plugin filename="gz-sim-velocity-control-system"
+              name="gz::sim::systems::VelocityControl">
+      </plugin>
+    </model>
+
+    <!-- ============================================================ -->
+    <!-- 動的障害物 2: 箱 (カートモデル)                            -->
+    <!-- ============================================================ -->
+    <!-- gz topic コマンドで移動可能:                                -->
+    <!--   gz topic -t /model/moving_cart/cmd_vel                    -->
+    <!--     -m gz.msgs.Twist -p 'linear: {x: 0.3}'                 -->
+    <model name="moving_cart">
+      <pose>0.0 2.0 0.2 0 0 0</pose>
+      <link name="body">
+        <inertial>
+          <mass>15.0</mass>
+          <inertia>
+            <ixx>0.8</ixx><iyy>0.8</iyy><izz>0.5</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.6 0.4 0.4</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.6 0.4 0.4</size></box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.8 1</ambient>
+            <diffuse>0.2 0.2 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- VelocityControl: cmd_vel トピックで移動制御可能にする -->
+      <plugin filename="gz-sim-velocity-control-system"
+              name="gz::sim::systems::VelocityControl">
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

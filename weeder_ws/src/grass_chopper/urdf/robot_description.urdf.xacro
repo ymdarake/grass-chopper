@@ -310,6 +310,36 @@
   </gazebo>
 
   <!-- ================================================================== -->
+  <!-- IMUセンサー: 慣性計測装置 (Phase 4f: 傾斜検知)                   -->
+  <!-- ================================================================== -->
+  <link name="imu_link">
+    <xacro:box_inertia m="0.01" x="0.01" y="0.01" z="0.01"/>
+    <visual>
+      <geometry>
+        <box size="0.01 0.01 0.01"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Harmonic用 IMUセンサー設定 -->
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <visualize>false</visualize>
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+    </sensor>
+  </gazebo>
+
+  <!-- ================================================================== -->
   <!-- Gazebo Harmonicプラグイン                                         -->
   <!-- ================================================================== -->
 
@@ -336,6 +366,14 @@
       <child_frame_id>base_link</child_frame_id>
       <!-- TFトピック名: ros_gz_bridge で /tf として直接ブリッジ可能にする -->
       <tf_topic>/tf</tf_topic>
+    </plugin>
+  </gazebo>
+
+  <!-- IMU システムプラグイン -->
+  <!-- IMU センサーデータを計算・発行するためのプラグイン -->
+  <gazebo>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu">
     </plugin>
   </gazebo>
 

@@ -1,0 +1,52 @@
+# ============================================================================
+# Collision Monitor パラメータ設定 (Phase 4a)
+# ============================================================================
+# ロボットの衝突防止のための近接監視と速度制限を行う。
+# VM 低負荷環境向けに計算頻度を抑え、TF 許容誤差を広めに設定。
+# ============================================================================
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: True
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_raw"   # twist_mux からの入力
+    cmd_vel_out_topic: "cmd_vel"     # Gazebo への最終出力
+    use_stamped_vel: False           # twist_mux と合わせる (TwistStamped ではなく Twist を使用)
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.5         # VM 向けに TF 待ち時間を緩和 [s]
+    source_timeout: 1.0              # センサーデータタイムアウト [s]
+    stop_pub_timeout: 1.0            # 停止指令の継続時間 [s]
+    # VM 低負荷設定
+    frequency: 10.0                  # 監視周期 (20.0 -> 10.0 Hz)
+
+    # --- 監視ゾーンの定義 ---
+    # 優先度順に適用される (先にマッチしたものが優先)
+    polygons: ["StopPolygon", "SlowdownPolygon"]
+
+    # 1. 停止ゾーン (ロボットのフットプリントより一回り大きい)
+    StopPolygon:
+      type: "polygon"
+      # ロボット寸法 (0.3m x 0.28m) に対し、前後左右に余裕を持たせる
+      points: [0.25, 0.20, 0.25, -0.20, -0.25, -0.20, -0.25, 0.20]
+      action_type: "stop"
+      max_points: 3                  # 停止判定に必要な最小点数
+      visualize: True                # rviz2 で表示可能
+      polygon_pub_topic: "stop_polygon"
+
+    # 2. 減速ゾーン (ロボットの前方に広く設定)
+    SlowdownPolygon:
+      type: "polygon"
+      # 前方 0.7m, 左右 0.4m の範囲を監視
+      points: [0.70, 0.40, 0.70, -0.40, -0.35, -0.40, -0.35, 0.40]
+      action_type: "slowdown"
+      slowdown_ratio: 0.4            # 速度を 40% に制限
+      max_points: 3
+      visualize: True
+      polygon_pub_topic: "slowdown_polygon"
+
+    # --- 観測ソース (LiDAR) ---
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/scan"

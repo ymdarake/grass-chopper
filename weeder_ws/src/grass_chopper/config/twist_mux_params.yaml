@@ -21,4 +21,8 @@ twist_mux:
       teleop:
         topic: cmd_vel_teleop      # 手動操作 (将来用)
         timeout: 0.5
-        priority: 20               # 手動が最優先
+        priority: 20               # 手動が優先
+      incline_stop:
+        topic: cmd_vel_incline     # 傾斜検知緊急停止 (Phase 4f)
+        timeout: 0.5
+        priority: 30               # 最優先 (安全停止)

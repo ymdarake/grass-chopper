@@ -134,6 +134,8 @@ def _launch_setup(context, *args, **kwargs):
             '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
             # TF: Gazebo → ROS 2 (odom→base_link 座標変換, Phase 3 SLAM用)
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+            # IMU: Gazebo → ROS 2 (傾斜検知用, Phase 4f)
+            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
         ]
     )
 

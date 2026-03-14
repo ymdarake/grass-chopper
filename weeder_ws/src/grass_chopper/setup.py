@@ -65,6 +65,7 @@ setup(
             'coverage_tracker_node = grass_chopper.coverage_tracker_node:main',
             'battery_sim_node = grass_chopper.battery_sim_node:main',
             'mission_tree_node = grass_chopper.mission_tree_node:main',
+            'incline_monitor_node = grass_chopper.incline_monitor_node:main',
         ],
     },
 )
