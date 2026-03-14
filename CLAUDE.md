@@ -47,7 +47,7 @@ grass-chopper/
     │   ├── docking_behavior.py             # ドッキング行動ロジック (Phase 4d-e)
     │   ├── incline_monitor.py              # 傾斜検知 純粋ロジック (Phase 4f)
     │   └── incline_monitor_node.py         # 傾斜検知 ROS 2 アダプター (Phase 4f)
-    ├── test/                               # 189 テスト (Mac ホストで実行可)
+    ├── test/                               # 208 テスト (Mac ホストで実行可)
     │   ├── test_obstacle_avoidance.py      # 41件
     │   ├── test_coverage_planner.py        # 27件
     │   ├── test_coverage_tracker.py        # 20件
@@ -55,7 +55,7 @@ grass-chopper/
     │   ├── test_battery_simulator.py       # 18件
     │   ├── test_mission_behaviors.py       # 27件
     │   ├── test_docking_behavior.py        # 12件
-    │   ├── test_incline_monitor.py         # 17件
+    │   ├── test_incline_monitor.py         # 36件
     │   └── test_weeder_node.py             # VM 統合テスト (rclpy 必要)
     ├── config/
     │   ├── weeder_params.yaml              # 障害物回避パラメータ

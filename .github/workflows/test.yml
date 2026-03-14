@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: weeder_ws/src/grass_chopper
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pytest numpy shapely opencv-python-headless pyyaml
+
+      - name: Run pure logic tests (189 tests)
+        run: python -m pytest test/test_obstacle_avoidance.py test/test_coverage_planner.py test/test_coverage_tracker.py test/test_map_region_detector.py test/test_battery_simulator.py test/test_mission_behaviors.py test/test_docking_behavior.py test/test_incline_monitor.py -v
+
+      - name: Syntax check (Python + YAML)
+        working-directory: .
+        run: python scripts/syntax_check.py
