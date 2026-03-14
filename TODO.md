@@ -7,9 +7,10 @@
 - [x] IMU キャリブレーション関数 (取り付けオフセット補正) — 純粋関数で TDD
 - [x] Pico 通信プロトコル + PID 制御 — 純粋ロジック TDD (33テスト)
 - [ ] Pico ファームウェア (MicroPython) — 上記ロジックを実機に移植
-- [ ] ros2_control hardware_interface — Pico との UART 通信スケルトン (モック付き TDD)
-- [ ] robot_launch.py — 実機用 launch ファイル (sim_launch.py から Gazebo/Bridge 除去)
-- [ ] シャーシの 3D モデル — OpenSCAD でパラメトリック設計、STL 出力
+- [x] シリアルブリッジ純粋ロジック — 通信状態管理, Watchdog, オドメトリ計算 (21テスト)
+- [x] robot_launch.py — 実機用 launch ファイル (RPLidar/BNO055/SLAM, ポート引数化)
+- [ ] serial_bridge_node.py — ROS 2 アダプター (実機 Pico 接続時に作成)
+- [x] シャーシの 3D モデル — OpenSCAD でパラメトリック設計 (models/chassis/)
 
 ## 優先度 中
 
