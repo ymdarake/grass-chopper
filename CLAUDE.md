@@ -204,8 +204,14 @@ bash run_sim.sh
 # VM 内でビルド
 make vm-build
 
-# VM 内でシミュレーション起動 (バックグラウンド)
+# VM 内でシミュレーション起動 (GUI あり、noVNC で画面確認可)
 make vm-sim
+
+# VM 内でシミュレーション起動 (ヘッドレス: GUI なし、低負荷)
+make vm-sim-headless
+
+# ミッション管理テスト (ヘッドレス)
+make vm-sim-mission-headless
 
 # Nav2 モードでシミュレーション起動 (weeder_node なし)
 make vm-sim-nav2
@@ -254,13 +260,24 @@ noVNC URL: `http://localhost:6080/vnc.html?autoconnect=true&password=ubuntu`
 Playwright MCP ツールで noVNC にアクセスし、Gazebo / RViz の画面を確認・操作する。
 設定は `.mcp.json` に定義済み。
 
+### ヘッドレス vs GUI モード
+
+| モード | コマンド例 | GUI | カメラ | 用途 |
+|--------|-----------|-----|--------|------|
+| GUI (通常) | `make vm-sim` | あり | あり | 画面確認、Playwright/noVNC |
+| ヘッドレス | `make vm-sim-headless` | なし | あり | 自動テスト (トピック値確認) |
+
+- **普段はヘッドレスで軽く回し、画面確認したいときだけ GUI モードで起動**
+- ヘッドレスでも `/scan`, `/camera/image_raw` 等のセンサーデータは取得可能
+- Playwright / noVNC で画面を見たい場合は GUI モード必須
+
 ### 典型的な開発フロー
 
 1. Mac ホストでコード編集 + `make test-pure` で純粋ロジックテスト
 2. `make vm-build` で VM 内ビルド
-3. `make vm-sim` でシミュレーション起動
-4. `/sim-screenshot` で Gazebo 画面を確認
-5. `/vm-exec` で ROS 2 トピック監視 (`ros2 topic echo /scan --once` 等)
+3. `make vm-sim-headless` でヘッドレスシミュレーション起動 (低負荷)
+4. `/vm-exec` で ROS 2 トピック監視 (`ros2 topic echo /scan --once` 等)
+5. 画面確認が必要な場合のみ `make vm-sim` + `/sim-screenshot`
 
 ## テスト方針
 

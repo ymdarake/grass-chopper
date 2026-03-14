@@ -1,4 +1,4 @@
-.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-nav2 vm-sim-coverage vm-sim-obstacles vm-sim-mission vm-nav2 vm-nav2-test vm-coverage vm-coverage-obstacles vm-mission vm-battery vm-docking vm-kill vm-stop vm-info vm-topics vm-forward
+.PHONY: check-syntax test-pure test-coverage vm-build vm-sim vm-sim-headless vm-sim-nav2 vm-sim-coverage vm-sim-obstacles vm-sim-mission vm-sim-mission-headless vm-nav2 vm-nav2-test vm-coverage vm-coverage-obstacles vm-mission vm-battery vm-docking vm-kill vm-stop vm-info vm-topics vm-forward
 
 ## 構文チェック: Python + YAML
 check-syntax:
@@ -20,6 +20,10 @@ vm-build:
 ## VM 内でシミュレーション起動
 vm-sim:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && ros2 launch grass_chopper sim_launch.py'
+
+## VM 内でシミュレーション起動 (ヘッドレス: GUI なし、センサーデータは取得可)
+vm-sim-headless:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && ros2 launch grass_chopper sim_launch.py headless:=true'
 
 ## Nav2 モードでシミュレーション起動 (weeder_node なし、slam_test.world)
 vm-sim-nav2:
@@ -48,6 +52,10 @@ vm-coverage-obstacles:
 ## ミッション管理テスト用シミュレーション起動 (docking_test.world + Nav2 モード)
 vm-sim-mission:
 	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export DISPLAY=:0 && export GZ_SIM_RESOURCE_PATH=~/weeder_build/install/grass_chopper/share/grass_chopper/models:$${GZ_SIM_RESOURCE_PATH} && ros2 launch grass_chopper sim_launch.py world:=docking_test.world x:=-3.5 y:=-3.5 nav2_mode:=true'
+
+## ミッション管理テスト用シミュレーション起動 (ヘッドレス: GUI なし)
+vm-sim-mission-headless:
+	multipass exec ros2-vm -- bash -c 'source /opt/ros/jazzy/setup.bash && source ~/weeder_build/install/setup.bash && export LIBGL_ALWAYS_SOFTWARE=1 && export GZ_SIM_RESOURCE_PATH=~/weeder_build/install/grass_chopper/share/grass_chopper/models:$${GZ_SIM_RESOURCE_PATH} && ros2 launch grass_chopper sim_launch.py world:=docking_test.world x:=-3.5 y:=-3.5 nav2_mode:=true headless:=true'
 
 ## バッテリーシミュレーションノード起動 (vm-sim-mission が起動済みの状態で実行)
 vm-battery:

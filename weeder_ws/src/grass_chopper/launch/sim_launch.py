@@ -38,6 +38,7 @@ def _launch_setup(context, *args, **kwargs):
     world_name = LaunchConfiguration('world').perform(context)
     spawn_x = LaunchConfiguration('x').perform(context)
     spawn_y = LaunchConfiguration('y').perform(context)
+    headless = LaunchConfiguration('headless').perform(context).lower() == 'true'
 
     # --- URDF/Xacroファイルの読み込みと変換 ---
     # .xacro ファイルをXMLに変換してロボットの記述を取得
@@ -54,7 +55,12 @@ def _launch_setup(context, *args, **kwargs):
     # ros_gz_sim パッケージの gz_sim.launch.py をインクルード
     # gz_args: Gazeboに渡す引数
     #   -r: シミュレーションを即座に実行開始
+    #   -s: サーバーのみ (GUI なし、ヘッドレス)
+    #   --headless-rendering: レンダリングエンジンは動作 (カメラ画像は取得可)
     #   world_file: 読み込むワールドファイル
+    gz_args = f'-r {world_file}'
+    if headless:
+        gz_args = f'-r -s --headless-rendering {world_file}'
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -63,7 +69,7 @@ def _launch_setup(context, *args, **kwargs):
                 'gz_sim.launch.py'
             )
         ),
-        launch_arguments={'gz_args': f'-r {world_file}'}.items()
+        launch_arguments={'gz_args': gz_args}.items()
     )
 
     # ===================================================================
@@ -189,5 +195,7 @@ def generate_launch_description():
                               description='ロボットの初期Y座標 [m]'),
         DeclareLaunchArgument('nav2_mode', default_value='false',
                               description='Nav2 使用時は true (weeder_node を停止)'),
+        DeclareLaunchArgument('headless', default_value='false',
+                              description='GUI なしで起動 (センサーデータは取得可)'),
         OpaqueFunction(function=_launch_setup),
     ])
